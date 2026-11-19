@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Nakan Text Animator Tools",
     "author": "Nakan Art",
-    "version": (1, 0, 0),
+    "version": (1, 0, 1),
     "blender": (5, 0, 0),
     "location": "Properties > Text (Object Data)",
     "description": "After Effects style text animators (range selector, opacity, position, "
@@ -909,10 +909,15 @@ def sync_object(ob, mod=None):
             set_in(mod, sock, font)
     if _ident(mod.node_group, "Format") is not None:
         codes, mixed = [], False
+        top = max(0, min(len(ob.material_slots), MAX_SLOTS) - 1)
         for f in cu.body_format:
             st = int(f.use_bold) + 2 * int(f.use_italic)
             mixed = mixed or st > 0
-            codes.append(FORMAT_ALPHABET[st + 4 * min(f.material_index, MAX_SLOTS - 1)])
+            # newer Blender versions report -1 for "no slot set": that is slot 0, and an index
+            # past the last slot falls back to it too (as Blender itself does)
+            mi = f.material_index
+            mi = 0 if mi < 0 else min(mi, top)
+            codes.append(FORMAT_ALPHABET[st + 4 * mi])
         set_in(mod, "Format", "".join(codes))
         set_in(mod, "Mixed Styles", mixed)
     set_in(mod, "Size", float(cu.size))
