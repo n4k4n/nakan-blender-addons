@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Nakan Text Animator Tools",
     "author": "Nakan Art",
-    "version": (1, 0, 1),
+    "version": (1, 1, 0),
     "blender": (5, 0, 0),
     "location": "Properties > Text (Object Data)",
     "description": "After Effects style text animators (range selector, opacity, position, "
@@ -15,7 +15,7 @@ import uuid
 
 import bpy
 
-NG_VERSION = 10
+NG_VERSION = 11
 BASE_NAME = "AE Text Base"
 ANIM_PREFIX = "AE Text Animator"
 GEO_NAME = "AE Text Geometry"
@@ -48,7 +48,7 @@ KIND_PROPS = {
     'POSITION': ["Position"],
     'SCALE': ["Scale", "Anchor", "Anchor Offset"],
     'ROTATION': ["Rotation", "Anchor", "Anchor Offset"],
-    'TRACKING': ["Tracking"],
+    'TRACKING': ["Tracking", "Anchor"],
     'FILL': ["Material"],
     'EXTRUDE': ["Extrude", "Depth Anchor"],
     'BEVEL': ["Bevel"],
@@ -626,6 +626,9 @@ def build_animator_group(kind):
         _anchor_sockets(P)
     elif kind == 'TRACKING':
         P("Tracking", 'NodeSocketFloat', 150.0, desc="Tracking amount in 1/1000 em, like After Effects")
+        P("Anchor", 'NodeSocketMenu',
+          desc="Which part of each line stays in place while the letters spread: the text's own "
+               "alignment, its left edge, its center or its right edge")
     elif kind == 'EXTRUDE':
         P("Extrude", 'NodeSocketFloat', 0.0, subtype='DISTANCE', min_value=0.0,
           desc="Extrude of the selected characters (the Text object's own value elsewhere)")
@@ -695,8 +698,29 @@ def build_animator_group(kind):
         acc = b.node('GeometryNodeAccumulateField', {'data_type': 'FLOAT', 'domain': 'INSTANCE'})
         b.set(b.inp(acc, 'Value'), tv)
         b.set(b.inp(acc, 'Group Index'), b.attr('ae_line', 'INT'))
-        shift = b.m('SUBTRACT', b.out(acc, 'Trailing'),
-                    b.m('MULTIPLY', b.out(acc, 'Total'), b.attr('ae_align')))
+        anchor = b.menu('FLOAT', G("Anchor"), [
+            ("Text Alignment", b.attr('ae_align')),
+            ("Left", 0.0),
+            ("Center", 0.5),
+            ("Right", 1.0),
+        ])
+        # the visible spread of a line is the tracking up to its last visible character (the
+        # space added after it, trailing spaces and the line break do not show), so an
+        # anchored edge or center stays put
+        bmn = b.node('ShaderNodeSeparateXYZ')
+        b.set(bmn.inputs[0], b.attr('ae_bbmin', 'FLOAT_VECTOR'))
+        bmx = b.node('ShaderNodeSeparateXYZ')
+        b.set(bmx.inputs[0], b.attr('ae_bbmax', 'FLOAT_VECTOR'))
+        vis = b.m('GREATER_THAN', b.m('SUBTRACT', bmx.outputs[0], bmn.outputs[0]), 1e-6)
+        cnt = b.node('GeometryNodeAccumulateField', {'data_type': 'FLOAT', 'domain': 'INSTANCE'})
+        b.set(b.inp(cnt, 'Value'), vis)
+        b.set(b.inp(cnt, 'Group Index'), b.attr('ae_line', 'INT'))
+        is_last = b.m('MULTIPLY', vis, b.m('COMPARE', b.out(cnt, 'Leading'), b.out(cnt, 'Total'), 0.5))
+        lastv = b.node('GeometryNodeAccumulateField', {'data_type': 'FLOAT', 'domain': 'INSTANCE'})
+        b.set(b.inp(lastv, 'Value'), b.m('MULTIPLY', b.out(acc, 'Trailing'), is_last))
+        b.set(b.inp(lastv, 'Group Index'), b.attr('ae_line', 'INT'))
+        spread = b.out(lastv, 'Total')
+        shift = b.m('SUBTRACT', b.out(acc, 'Trailing'), b.m('MULTIPLY', spread, anchor))
         tn = b.node('GeometryNodeTranslateInstances')
         b.set(b.inp(tn, 'Instances'), geo)
         b.set(b.inp(tn, 'Translation'), b.xyz(shift, 0.0, 0.0))
@@ -881,6 +905,7 @@ def upgrade_animator(ob, mod):
             except Exception:
                 pass
     based = get_in(mod, "Based On")
+    anchor = get_in(mod, "Anchor") if _ident(mod.node_group, "Anchor") is not None else None
     old = mod.node_group
     ng = animator_group(kind).copy()
     ng.name = "%s · %s · %s" % (ANIM_PREFIX, KIND_LABEL[kind], ob.name)
@@ -892,6 +917,8 @@ def upgrade_animator(ob, mod):
             except Exception:
                 pass
     set_menu(mod, "Based On", [based] if based else ["Characters"])
+    if _ident(ng, "Anchor") is not None:
+        set_menu(mod, "Anchor", [anchor] if anchor else ["Text Alignment"])
     if old.users == 0:
         bpy.data.node_groups.remove(old)
 
