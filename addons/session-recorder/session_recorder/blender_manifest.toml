@@ -1,0 +1,15 @@
+schema_version = "1.0.0"
+
+id = "session_recorder"
+version = "1.0.0"
+name = "Session Recorder"
+tagline = "Automatically records every Blender session as a timelapse"
+maintainer = "Nakan Art"
+type = "add-on"
+
+blender_version_min = "4.2.0"
+
+license = ["SPDX:GPL-3.0-or-later"]
+
+[permissions]
+files = "Saves the session videos to disk"
