@@ -1,0 +1,51 @@
+# Push a tag named <addon-folder>-v<version> (for example vector-texturing-v1.0.1)
+# and this builds that add-on's download and publishes it as a GitHub Release.
+name: Release add-on
+
+on:
+  push:
+    tags:
+      - "*-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build download
+        id: build
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          ADDON="${TAG%-v*}"
+          VERSION="${TAG##*-v}"
+          SRC="addons/${ADDON}"
+          [ -d "$SRC" ] || { echo "No folder $SRC for tag $TAG"; exit 1; }
+          mkdir -p dist
+          PKG=$(find "$SRC" -mindepth 1 -maxdepth 1 -type d ! -name __pycache__ | head -n 1)
+          if [ -n "$PKG" ]; then
+            NAME=$(basename "$PKG")
+            if [ -f "$PKG/blender_manifest.toml" ]; then
+              # Blender extension: manifest at the root of the zip
+              (cd "$PKG" && zip -qr "$GITHUB_WORKSPACE/dist/${NAME}_${VERSION}.zip" . -x '*__pycache__*')
+            else
+              (cd "$SRC" && zip -qr "$GITHUB_WORKSPACE/dist/${NAME}_${VERSION}.zip" "$NAME" -x '*__pycache__*')
+            fi
+          else
+            cp "$SRC"/*.py dist/
+          fi
+          TITLE=$(head -n 1 "$SRC/README.md" | sed 's/^# *//')
+          echo "title=${TITLE} ${VERSION}" >> "$GITHUB_OUTPUT"
+          ls -l dist
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "${{ steps.build.outputs.title }}" \
+            --notes "Install with Edit > Preferences > Add-ons > Install from Disk and pick the downloaded file. See the add-on's README for details."
