@@ -1,18 +1,20 @@
 # Nakan Blender Add-ons
 
-Free Blender add-ons made by [Nakan](https://nakanart.notion.site/Freebies-2133933fe80180b9bbf7ff2888aac685) for his own motion design, illustration and 3D work, shared as they are. Each one lives in its own folder under [`addons/`](addons).
+Free Blender add-ons I made for my own motion design, illustration and 3D work. Most of them come from things I was used to in other software (After Effects, Cinema 4D, Photoshop, Affinity Designer) and missed in Blender. My goal is to solve as much as I can inside Blender, without jumping to other programs and breaking the workflow. I hope they help you too.
+
+Each add-on lives in its own folder under [`addons/`](addons), with a step-by-step guide in its README. More about them, and other freebies, on [my Freebies page](https://nakanart.notion.site/Freebies-2133933fe80180b9bbf7ff2888aac685).
 
 | Add-on | What it does | Blender |
 |---|---|---|
-| [Texturing Tools](addons/texturing-tools) | Texture Paint upgrades: elliptical tips, surface-aware painting, two-color painting, seamless blur and distort | 4.2+ |
-| [Vector Texturing](addons/vector-texturing) | Illustrator-style curves and text painted into the UV texture live, with Trim Path and Roughen Edges | 4.2+ |
-| [Text Animator Tools](addons/text-animator-tools) | After Effects-style text animators on editable Text objects | 5.0+ |
-| [GP Tools](addons/gp-tools) | Grease Pencil helpers: flip canvas, select by layer, Layer Mirror | 4.3+ |
-| [Bone Tools](addons/bone-tools) | Duplicate bone collections with their bones, prefix and rename bones in sequence | 4.1+ |
-| [Collect Files](addons/collect-files) | Packs everything a .blend needs (libraries, textures, caches) for archiving or sending | 4.2+ |
-| [Session Recorder](addons/session-recorder) | Records every Blender session as a timelapse | 4.2+ |
-| [Scene Switcher](addons/scene-switcher) | Scene menu at the mouse position, with groups as submenus | 4.0+ |
-| [Add Geometry Nodes Object](addons/add-geometry-nodes-object) | Adds an empty object with a Geometry Nodes modifier and a new node group | 4.0+ |
+| [Texturing Tools](addons/texturing-tools) | Painting tools for the artist: editable round brushes, color variation per stroke, seamless blur, normals from your painting | 4.2+ |
+| [Vector Texturing](addons/vector-texturing) | Illustrate with vectors directly on the mesh, projected into the texture, with blur and roughen edges on top | 4.2+ |
+| [Text Animator Tools](addons/text-animator-tools) | After Effects' text animators, plus animated materials, extrude and bevel per character | 5.0+ |
+| [GP Tools](addons/gp-tools) | Photoshop-like comforts for Grease Pencil: flip canvas, live mirror, select by layer | 4.3+ |
+| [Bone Tools](addons/bone-tools) | More from the Bone Collections panel: copy a collection with its bones, rename in sequence, sides | 4.1+ |
+| [Collect Files](addons/collect-files) | After Effects' Collect Files: gather everything a project uses into the .blend, and unpack it again | 4.2+ |
+| [Session Recorder](addons/session-recorder) | Procreate-style timelapse: records every Blender session in the background | 4.2+ |
+| [Scene Switcher](addons/scene-switcher) | Group your scenes and switch from a menu under the mouse | 4.0+ |
+| [Add Geometry Nodes Object](addons/add-geometry-nodes-object) | Add > Geometry Nodes: an object ready for nodes in one step | 4.0+ |
 
 ## Install
 
