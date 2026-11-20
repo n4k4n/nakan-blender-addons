@@ -4,6 +4,8 @@ After Effects' Collect Files, in Blender: one button gathers everything a projec
 
 Blender doesn't have a Collect Files like After Effects, and that always seemed absurd to me. So I made two simple buttons: one gathers everything a project uses into the .blend, the other unpacks it again. I use it to reorganize projects, archive them and send them to other people. You'll find it in **File > External Data**.
 
+**Why not just Pack Resources?** Blender's Pack Resources only packs images, sounds and fonts into the open file. Collect Files also makes linked libraries local, takes UDIMs, Geometry Nodes bakes and IES/OSL files, copies what can't be packed (videos, image sequences, VDBs, Alembic/USD, simulation caches) next to the file with relative paths, works on a copy in the background, and stops if something is missing instead of saving an incomplete archive.
+
 ## Features
 
 - **Collect**: creates a new, self-contained .blend in the folder you choose. Linked libraries become local, and images, sounds, fonts, UDIM tiles, Geometry Nodes bakes and IES/OSL files go inside the .blend. Things Blender can only read from disk (VDB volumes, Alembic/USD, videos, image sequences, fluid, ocean and physics caches) are copied to a `<name>_files` folder next to it, with relative paths.
