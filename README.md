@@ -15,13 +15,14 @@ Each add-on lives in its own folder under [`addons/`](addons), with a step-by-st
 | [Session Recorder](addons/session-recorder) | Procreate-style timelapse: records every Blender session in the background | 4.2+ |
 | [Scene Switcher](addons/scene-switcher) | Group your scenes and switch from a menu under the mouse | 4.0+ |
 | [Add Geometry Nodes Object](addons/add-geometry-nodes-object) | Add > Geometry Nodes: an object ready for nodes in one step | 4.0+ |
+| [Extras for PenForge](addons/penforge-extras) | Live shapes, align and distribute, projection and Vector Mode on top of [PenForge](https://4754272285663.gumroad.com/l/penforge) (sold separately) | 4.2+ |
 
 ## Install
 
 Download the add-on's file from [Releases](../../releases) (or from its folder here), then in Blender go to **Edit > Preferences > Add-ons > Install from Disk**, pick the file and enable it.
 
 - Single `.py` add-ons can be installed as they are.
-- Folder add-ons (Texturing Tools, Vector Texturing, Session Recorder) install from the `.zip` in Releases.
+- Folder add-ons (Texturing Tools, Vector Texturing, Session Recorder, Extras for PenForge) install from the `.zip` in Releases.
 
 ## Feedback
 
