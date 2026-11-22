@@ -163,10 +163,10 @@ def split_object(context, ob):
     return made
 
 
-class NKPF_OT_split(bpy.types.Operator):
+class NKDRAW_OT_split(bpy.types.Operator):
     """Split the selected curves: every separate shape becomes its own object (holes stay with their
     letter / shape), origin at its centre, named left to right"""
-    bl_idname = "nkpf.split"
+    bl_idname = "nkdraw.split"
     bl_label = "Split"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -197,7 +197,7 @@ class NKPF_OT_split(bpy.types.Operator):
         return {'FINISHED'}
 
 
-classes = (NKPF_OT_split,)
+classes = (NKDRAW_OT_split,)
 
 
 def register():

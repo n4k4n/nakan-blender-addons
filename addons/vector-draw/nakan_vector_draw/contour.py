@@ -290,11 +290,11 @@ def _draw(op, context):
     gpu.state.blend_set('NONE')
 
 
-class NKPF_OT_contour(bpy.types.Operator):
+class NKDRAW_OT_contour(bpy.types.Operator):
     """Contour (offset path): move the mouse right = outwards, left = inwards; never crosses itself.
     J corners Round / Miter / Bevel · K new curve / change the original · Ctrl grid · Shift fine ·
     type a value + Enter"""
-    bl_idname = "nkpf.contour"
+    bl_idname = "nkdraw.contour"
     bl_label = "Contour"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -373,7 +373,7 @@ class NKPF_OT_contour(bpy.types.Operator):
             dx = event.mouse_region_x - self.start_x
             d = dx * self.upp * (0.1 if event.shift else 1.0)
             if event.ctrl:
-                step = getattr(getattr(context.scene, "penforge", None), "grid_step", 0.1) or 0.1
+                step = getattr(getattr(context.scene, "nkdraw", None), "grid_step", 0.1) or 0.1
                 d = round(d / step) * step
             self.distance = d
             self._update(context)
@@ -459,7 +459,7 @@ class NKPF_OT_contour(bpy.types.Operator):
         return {'FINISHED'}
 
 
-classes = (NKPF_OT_contour,)
+classes = (NKDRAW_OT_contour,)
 
 
 def register():

@@ -1,0 +1,23 @@
+schema_version = "1.0.0"
+
+id = "nakan_vector_draw"
+version = "1.0.0"
+name = "Nakan Vector Draw"
+tagline = "Vector drawing with a pen tool, live shapes, Repeat and snaps"
+maintainer = "Nakan (based on PenForge by Enrico Biancardi)"
+type = "add-on"
+
+blender_version_min = "4.2.0"
+
+license = ["SPDX:GPL-3.0-or-later"]
+tags = ["Add Curve", "Modeling"]
+
+
+# Clipper2 (Boost Software License 1.0): clean Illustrator-style stroke outlines
+wheels = [
+  "./wheels/pyclipr-0.1.8-cp311-cp311-macosx_14_0_arm64.whl",
+  "./wheels/pyclipr-0.1.8-cp311-cp311-win_amd64.whl",
+  "./wheels/pyclipr-0.1.8-cp313-cp313-linux_x86_64.whl",
+  "./wheels/pyclipr-0.1.8-cp313-cp313-macosx_14_0_arm64.whl",
+  "./wheels/pyclipr-0.1.8-cp313-cp313-win_amd64.whl",
+]

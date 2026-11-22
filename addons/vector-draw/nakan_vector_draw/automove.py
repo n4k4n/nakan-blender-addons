@@ -33,7 +33,7 @@ def _tick():
     if scene is None or not mode_on():
         _last[0] = None
         return None                          # timer stops; switching the mode on starts it again
-    if not hasattr(bpy.ops, "penforge") or not hasattr(bpy.ops.penforge, "move"):
+    if not hasattr(bpy.ops, "nkdraw") or not hasattr(bpy.ops.nkdraw, "move"):
         return 1.0
     for win in wm.windows:
         try:
@@ -58,7 +58,7 @@ def _tick():
             continue
         try:
             with bpy.context.temp_override(window=win, area=area, region=region):
-                bpy.ops.penforge.move('INVOKE_DEFAULT')
+                bpy.ops.nkdraw.move('INVOKE_DEFAULT')
         except (RuntimeError, TypeError):
             pass
         break
@@ -74,7 +74,7 @@ def prefs():
 
 def mode_on():
     p = prefs()
-    return bool(p is not None and p.penforge_mode and getattr(p, "move_on_select", False))
+    return bool(p is not None and p.vector_mode and getattr(p, "move_on_select", False))
 
 
 def start():
@@ -87,18 +87,18 @@ def toggle(self, context):
     start()
 
 
-class NKPF_PT_mode(bpy.types.Panel):
+class NKDRAW_PT_mode(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "PenForge"
-    bl_parent_id = "PENFORGE_PT_main"
+    bl_category = "Nakan Vector Draw"
+    bl_parent_id = "NKDRAW_PT_main"
     bl_label = "Vector Mode"
     bl_order = 49
 
     def draw_header(self, context):
         p = prefs()
         if p is not None:
-            self.layout.prop(p, "penforge_mode", text="")
+            self.layout.prop(p, "vector_mode", text="")
 
     def draw(self, context):
         lay = self.layout

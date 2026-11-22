@@ -1,6 +1,6 @@
 """Align and distribute objects (Illustrator style) on the CPlane axes, the world axes or the active
 object's axes. The bounds are the real visible shape (curve samples, evaluated mesh vertices),
-children included (a PenForge curve brings its Extrude / Thickness solid)."""
+children included (a Vector Draw curve brings its Extrude / Thickness solid)."""
 import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty
 from mathutils import Matrix, Vector
@@ -91,7 +91,7 @@ def bounds(ob, depsgraph, o, R):
 
 
 def items(context):
-    """The objects to move: a selected PenForge solid stands for its curve; an object whose parent
+    """The objects to move: a selected Vector Draw solid stands for its curve; an object whose parent
     is moved too is left alone (it follows)."""
     out = []
     for ob in context.selected_objects:
@@ -136,9 +136,9 @@ def _key(lo, hi, k, where):
 
 
 # --------------------------------------------------------------------------------- operators
-class NKPF_OT_align(bpy.types.Operator):
+class NKDRAW_OT_align(bpy.types.Operator):
     """Align the selected objects"""
-    bl_idname = "nkpf.align"
+    bl_idname = "nkdraw.align"
     bl_label = "Align"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -188,9 +188,9 @@ class NKPF_OT_align(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class NKPF_OT_distribute(bpy.types.Operator):
+class NKDRAW_OT_distribute(bpy.types.Operator):
     """Distribute the selected objects"""
-    bl_idname = "nkpf.distribute"
+    bl_idname = "nkdraw.distribute"
     bl_label = "Distribute"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -269,7 +269,7 @@ class NKPF_OT_distribute(bpy.types.Operator):
 
 class NKPF_Align(bpy.types.PropertyGroup):
     space: EnumProperty(name="Axes", items=[
-        ('CPLANE', "CPlane", "the add-on's CPlane axes (the 3D cursor when PenForge is off)"),
+        ('CPLANE', "CPlane", "the add-on's CPlane axes (the 3D cursor when Vector Draw is off)"),
         ('GLOBAL', "World", "World axes"),
         ('ACTIVE', "Active", "The axes of the active object")], default='CPLANE')
     align_to: EnumProperty(name="To", items=[
@@ -290,11 +290,11 @@ def _btn(row, opid, axis, where, icon, text=""):
     op.axis, op.where = axis, where
 
 
-class NKPF_PT_align(bpy.types.Panel):
+class NKDRAW_PT_align(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "PenForge"
-    bl_parent_id = "PENFORGE_PT_main"
+    bl_category = "Nakan Vector Draw"
+    bl_parent_id = "NKDRAW_PT_main"
     bl_label = "Align & Distribute"
     bl_order = 51
 
@@ -308,41 +308,41 @@ class NKPF_PT_align(bpy.types.Panel):
 
         lay.label(text="Align")
         row = lay.row(align=True)
-        _btn(row, "nkpf.align", 'X', 'MIN', 'ANCHOR_LEFT')
-        _btn(row, "nkpf.align", 'X', 'CENTER', 'ANCHOR_CENTER')
-        _btn(row, "nkpf.align", 'X', 'MAX', 'ANCHOR_RIGHT')
+        _btn(row, "nkdraw.align", 'X', 'MIN', 'ANCHOR_LEFT')
+        _btn(row, "nkdraw.align", 'X', 'CENTER', 'ANCHOR_CENTER')
+        _btn(row, "nkdraw.align", 'X', 'MAX', 'ANCHOR_RIGHT')
         row.separator()
-        _btn(row, "nkpf.align", 'Y', 'MAX', 'ANCHOR_TOP')
-        _btn(row, "nkpf.align", 'Y', 'CENTER', 'ANCHOR_CENTER')
-        _btn(row, "nkpf.align", 'Y', 'MIN', 'ANCHOR_BOTTOM')
+        _btn(row, "nkdraw.align", 'Y', 'MAX', 'ANCHOR_TOP')
+        _btn(row, "nkdraw.align", 'Y', 'CENTER', 'ANCHOR_CENTER')
+        _btn(row, "nkdraw.align", 'Y', 'MIN', 'ANCHOR_BOTTOM')
         if st.show_z:
             row = lay.row(align=True)
             row.label(text="Normal")
-            _btn(row, "nkpf.align", 'Z', 'MIN', 'TRIA_DOWN_BAR', "Min")
-            _btn(row, "nkpf.align", 'Z', 'CENTER', 'ANCHOR_CENTER', "Mid")
-            _btn(row, "nkpf.align", 'Z', 'MAX', 'TRIA_UP_BAR', "Max")
+            _btn(row, "nkdraw.align", 'Z', 'MIN', 'TRIA_DOWN_BAR', "Min")
+            _btn(row, "nkdraw.align", 'Z', 'CENTER', 'ANCHOR_CENTER', "Mid")
+            _btn(row, "nkdraw.align", 'Z', 'MAX', 'TRIA_UP_BAR', "Max")
 
         lay.label(text="Distribute")
         col = lay.column(align=True)
         row = col.row(align=True)
         row.label(text="X")
-        _btn(row, "nkpf.distribute", 'X', 'MIN', 'ANCHOR_LEFT')
-        _btn(row, "nkpf.distribute", 'X', 'CENTER', 'ANCHOR_CENTER')
-        _btn(row, "nkpf.distribute", 'X', 'MAX', 'ANCHOR_RIGHT')
-        _btn(row, "nkpf.distribute", 'X', 'GAP', 'ARROW_LEFTRIGHT', "Gap")
+        _btn(row, "nkdraw.distribute", 'X', 'MIN', 'ANCHOR_LEFT')
+        _btn(row, "nkdraw.distribute", 'X', 'CENTER', 'ANCHOR_CENTER')
+        _btn(row, "nkdraw.distribute", 'X', 'MAX', 'ANCHOR_RIGHT')
+        _btn(row, "nkdraw.distribute", 'X', 'GAP', 'ARROW_LEFTRIGHT', "Gap")
         row = col.row(align=True)
         row.label(text="Y")
-        _btn(row, "nkpf.distribute", 'Y', 'MAX', 'ANCHOR_TOP')
-        _btn(row, "nkpf.distribute", 'Y', 'CENTER', 'ANCHOR_CENTER')
-        _btn(row, "nkpf.distribute", 'Y', 'MIN', 'ANCHOR_BOTTOM')
-        _btn(row, "nkpf.distribute", 'Y', 'GAP', 'EMPTY_SINGLE_ARROW', "Gap")
+        _btn(row, "nkdraw.distribute", 'Y', 'MAX', 'ANCHOR_TOP')
+        _btn(row, "nkdraw.distribute", 'Y', 'CENTER', 'ANCHOR_CENTER')
+        _btn(row, "nkdraw.distribute", 'Y', 'MIN', 'ANCHOR_BOTTOM')
+        _btn(row, "nkdraw.distribute", 'Y', 'GAP', 'EMPTY_SINGLE_ARROW', "Gap")
         if st.show_z:
             row = col.row(align=True)
             row.label(text="Z")
-            _btn(row, "nkpf.distribute", 'Z', 'MIN', 'TRIA_DOWN_BAR')
-            _btn(row, "nkpf.distribute", 'Z', 'CENTER', 'ANCHOR_CENTER')
-            _btn(row, "nkpf.distribute", 'Z', 'MAX', 'TRIA_UP_BAR')
-            _btn(row, "nkpf.distribute", 'Z', 'GAP', 'EMPTY_SINGLE_ARROW', "Gap")
+            _btn(row, "nkdraw.distribute", 'Z', 'MIN', 'TRIA_DOWN_BAR')
+            _btn(row, "nkdraw.distribute", 'Z', 'CENTER', 'ANCHOR_CENTER')
+            _btn(row, "nkdraw.distribute", 'Z', 'MAX', 'TRIA_UP_BAR')
+            _btn(row, "nkdraw.distribute", 'Z', 'GAP', 'EMPTY_SINGLE_ARROW', "Gap")
         row = lay.row(align=True)
         row.prop(st, "use_spacing", text="")
         sub = row.row(align=True)
@@ -351,7 +351,7 @@ class NKPF_PT_align(bpy.types.Panel):
         lay.prop(st, "show_z")
 
 
-classes = (NKPF_Align, NKPF_OT_align, NKPF_OT_distribute, NKPF_PT_align)
+classes = (NKPF_Align, NKDRAW_OT_align, NKDRAW_OT_distribute, NKDRAW_PT_align)
 
 
 def register():

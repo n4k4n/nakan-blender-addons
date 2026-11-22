@@ -2,7 +2,7 @@
 
 The parameters live on the curve object (Object > nkpf_shape). Changing one rewrites the curve's
 Bezier spline in place, so the add-on's Extrude / Thickness solids (which rebuild when the curve data
-changes) follow. Shapes are built in the object's local XY plane, centred on the origin: PenForge
+changes) follow. Shapes are built in the object's local XY plane, centred on the origin: Vector Draw
 gives its shapes local axes = CPlane axes and the origin at the centre, so this is the CPlane.
 """
 import math
@@ -33,7 +33,7 @@ def _P(co, hl=None, hr=None, lt='VECTOR', rt='VECTOR'):
 
 def rounded_polygon(corners, radii):
     """Closed polygon (2D Vectors, in order) with a circular fillet of radius radii[i] on each corner.
-    Sharp corners are VECTOR points (PenForge 'corners': its live-corner dots still work on them).
+    Sharp corners are VECTOR points (Vector Draw 'corners': its live-corner dots still work on them).
     Fillets that would overlap are shrunk so they just meet."""
     n = len(corners)
     info = []
@@ -292,7 +292,7 @@ class NKPF_Shape(bpy.types.PropertyGroup):
 
 # ------------------------------------------------------------------------- recognise a shape
 def detect(ob):
-    """Read a PenForge rectangle / circle / polygon (or a star) back into parameters.
+    """Read a Vector Draw rectangle / circle / polygon (or a star) back into parameters.
     Returns a dict, or None if the curve is not one of them."""
     if ob is None or ob.type != 'CURVE':
         return None
@@ -381,10 +381,10 @@ def edited_outside(ob):
 
 
 # ---------------------------------------------------------------------------------- operators
-class NKPF_OT_make_live(bpy.types.Operator):
-    """Turn the selected PenForge rectangles / circles / polygons into live shapes
+class NKDRAW_OT_make_live(bpy.types.Operator):
+    """Turn the selected Vector Draw rectangles / circles / polygons into live shapes
     (size, roundness, star, drop... editable at any time)"""
-    bl_idname = "nkpf.make_live"
+    bl_idname = "nkdraw.make_live"
     bl_label = "Make Live Shape"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -410,9 +410,9 @@ class NKPF_OT_make_live(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class NKPF_OT_rebuild(bpy.types.Operator):
+class NKDRAW_OT_rebuild(bpy.types.Operator):
     """Rebuild the shape from its values (drops the edits made to its points by hand)"""
-    bl_idname = "nkpf.rebuild"
+    bl_idname = "nkdraw.rebuild"
     bl_label = "Rebuild Shape"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -426,10 +426,10 @@ class NKPF_OT_rebuild(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class NKPF_OT_detach(bpy.types.Operator):
+class NKDRAW_OT_detach(bpy.types.Operator):
     """Convert the primitive to plain curves: it looks exactly the same, its points become editable with
     the pen, and its shape values go away"""
-    bl_idname = "nkpf.detach"
+    bl_idname = "nkdraw.detach"
     bl_label = "Convert to Curves"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -444,9 +444,9 @@ class NKPF_OT_detach(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class NKPF_OT_add_shape(bpy.types.Operator):
+class NKDRAW_OT_add_shape(bpy.types.Operator):
     """Add a live shape on the CPlane (the add-on's, or the 3D cursor), centred on its origin"""
-    bl_idname = "nkpf.add_shape"
+    bl_idname = "nkdraw.add_shape"
     bl_label = "Add Live Shape"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -512,7 +512,7 @@ def draw_shape_ui(layout, ob):
     sh = ob.nkpf_shape
     row = layout.row()
     row.scale_y = 1.3
-    row.operator("nkpf.detach", icon='CURVE_BEZCURVE')
+    row.operator("nkdraw.detach", icon='CURVE_BEZCURVE')
     lay = layout
     lay.use_property_split = True
     lay.use_property_decorate = False
@@ -547,15 +547,15 @@ def draw_shape_ui(layout, ob):
         box.label(text="Points edited by hand", icon='ERROR')
         box.label(text="Changing a value rebuilds the shape")
         row = box.row(align=True)
-        row.operator("nkpf.rebuild", icon='FILE_REFRESH', text="Rebuild")
-        row.operator("nkpf.detach", icon='CURVE_BEZCURVE', text="Convert to Curves")
+        row.operator("nkdraw.rebuild", icon='FILE_REFRESH', text="Rebuild")
+        row.operator("nkdraw.detach", icon='CURVE_BEZCURVE', text="Convert to Curves")
 
 
-class NKPF_PT_shape(bpy.types.Panel):
+class NKDRAW_PT_shape(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "PenForge"
-    bl_parent_id = "PENFORGE_PT_main"
+    bl_category = "Nakan Vector Draw"
+    bl_parent_id = "NKDRAW_PT_main"
     bl_label = "Primitive"
     bl_order = 50
 
@@ -566,15 +566,15 @@ class NKPF_PT_shape(bpy.types.Panel):
             draw_shape_ui(lay, ob)
             return
         if ob is not None and ob.type == 'CURVE':
-            lay.operator("nkpf.make_live", icon='SHADERFX', text="Make Primitive")
+            lay.operator("nkdraw.make_live", icon='SHADERFX', text="Make Primitive")
         lay.label(text="Add a primitive on the CPlane:")
         row = lay.row(align=True)
         for k, label, _d, icon, _i in KINDS:
-            op = row.operator("nkpf.add_shape", text=label, icon=icon)
+            op = row.operator("nkdraw.add_shape", text=label, icon=icon)
             op.kind = k
 
 
-class NKPF_PT_shape_data(bpy.types.Panel):
+class NKDRAW_PT_shape_data(bpy.types.Panel):
     """The primitive's values in Properties > Object Data (like Affinity's shape attributes)"""
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
@@ -591,9 +591,9 @@ class NKPF_PT_shape_data(bpy.types.Panel):
         draw_shape_ui(self.layout, context.object)
 
 
-class NKPF_OT_shape_popup(bpy.types.Operator):
+class NKDRAW_OT_shape_popup(bpy.types.Operator):
     """Edit the live shape of the active curve in a small pop-up at the mouse"""
-    bl_idname = "nkpf.shape_popup"
+    bl_idname = "nkdraw.shape_popup"
     bl_label = "Live Shape"
 
     @classmethod
@@ -609,7 +609,7 @@ class NKPF_OT_shape_popup(bpy.types.Operator):
         if ob.nkpf_shape.live:
             draw_shape_ui(self.layout, ob)
         else:
-            self.layout.operator("nkpf.make_live", icon='SHADERFX')
+            self.layout.operator("nkdraw.make_live", icon='SHADERFX')
 
     def execute(self, context):
         return {'FINISHED'}
@@ -617,17 +617,17 @@ class NKPF_OT_shape_popup(bpy.types.Operator):
 
 def menu_add(self, context):
     self.layout.separator()
-    self.layout.operator_menu_enum("nkpf.add_shape", "kind", text="Live Shape", icon='SHADERFX')
+    self.layout.operator_menu_enum("nkdraw.add_shape", "kind", text="Live Shape", icon='SHADERFX')
 
 
 def menu_ctx(self, context):
     ob = context.active_object
     if ob is not None and ob.type == 'CURVE':
         self.layout.separator()
-        self.layout.operator("nkpf.shape_popup", icon='SHADERFX',
+        self.layout.operator("nkdraw.shape_popup", icon='SHADERFX',
                              text="Primitive..." if ob.nkpf_shape.live else "Make Primitive...")
         if ob.nkpf_shape.live:
-            self.layout.operator("nkpf.detach", icon='CURVE_BEZCURVE')
+            self.layout.operator("nkdraw.detach", icon='CURVE_BEZCURVE')
 
 
 # ------------------------------------------------- primitives stay out of Shape Builder / booleans
@@ -665,11 +665,10 @@ def guard(cls, method):
         def wrapped(self, context):
             return {'CANCELLED'} if refuse(self, context) else orig(self, context)
     wrapped._nkpf_guard = True
-    wrapped._orig = orig
     setattr(cls, method, wrapped)
 
 
-# ----------------------------------------------------------- PenForge shapes become live by themselves
+# ----------------------------------------------------------- Vector Draw shapes become live by themselves
 PF_NAMES = {"Rectangle", "Circle", "Polygon"}
 
 
@@ -685,7 +684,7 @@ def _pen_running():
     try:
         for win in bpy.context.window_manager.windows:
             for op in win.modal_operators:
-                if op.bl_idname in {"PENFORGE_OT_pen", "penforge.pen"}:
+                if op.bl_idname in {"NKDRAW_OT_pen", "nkdraw.pen"}:
                     return True
     except (AttributeError, ReferenceError):
         pass
@@ -741,8 +740,8 @@ def auto_live(scene, depsgraph):
         make_live(ob, vals, absorb_scale=False)
 
 
-classes = (NKPF_Shape, NKPF_OT_make_live, NKPF_OT_rebuild, NKPF_OT_detach, NKPF_OT_add_shape,
-           NKPF_OT_shape_popup, NKPF_PT_shape, NKPF_PT_shape_data)
+classes = (NKPF_Shape, NKDRAW_OT_make_live, NKDRAW_OT_rebuild, NKDRAW_OT_detach, NKDRAW_OT_add_shape,
+           NKDRAW_OT_shape_popup, NKDRAW_PT_shape, NKDRAW_PT_shape_data)
 
 
 def register():

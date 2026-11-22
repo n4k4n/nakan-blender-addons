@@ -22,9 +22,9 @@ def _prefs():
 
 
 # ---------------------------------------------------------------------------- G / R / S on the CPlane
-class NKPF_OT_plane_transform(bpy.types.Operator):
+class NKDRAW_OT_plane_transform(bpy.types.Operator):
     """Move / rotate / scale the selection on the CPlane (Blender's transform, locked to the CPlane)"""
-    bl_idname = "nkpf.plane_transform"
+    bl_idname = "nkdraw.plane_transform"
     bl_label = "Transform on CPlane"
 
     mode: EnumProperty(items=[('MOVE', "Move", ""), ('ROTATE', "Rotate", ""), ('SCALE', "Scale", "")])
@@ -46,10 +46,10 @@ class NKPF_OT_plane_transform(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class NKPF_OT_plane_duplicate(bpy.types.Operator):
+class NKDRAW_OT_plane_duplicate(bpy.types.Operator):
     """Duplicate the selection (curves bring their Extrude / Thickness solids) and move the copy on the
     CPlane (Esc leaves it in place)"""
-    bl_idname = "nkpf.plane_duplicate"
+    bl_idname = "nkdraw.plane_duplicate"
     bl_label = "Duplicate on CPlane"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -84,7 +84,7 @@ _keymaps = []
 
 def mode_on():
     p = _prefs()
-    return bool(p is not None and p.penforge_mode)
+    return bool(p is not None and p.vector_mode)
 
 
 def sync_keymaps():
@@ -102,20 +102,20 @@ def _add_keymaps():
         return
     km = kc.keymaps.new(name="Object Mode", space_type='EMPTY')
     for key, mode in (('G', 'MOVE'), ('R', 'ROTATE'), ('S', 'SCALE')):
-        kmi = km.keymap_items.new(NKPF_OT_plane_transform.bl_idname, key, 'PRESS')
+        kmi = km.keymap_items.new(NKDRAW_OT_plane_transform.bl_idname, key, 'PRESS')
         kmi.properties.mode = mode
         _keymaps.append((km, kmi))
-    kmi = km.keymap_items.new("penforge.pen", 'P', 'PRESS')
+    kmi = km.keymap_items.new("nkdraw.pen", 'P', 'PRESS')
     _keymaps.append((km, kmi))
-    kmi = km.keymap_items.new(NKPF_OT_plane_duplicate.bl_idname, 'D', 'PRESS', shift=True)
+    kmi = km.keymap_items.new(NKDRAW_OT_plane_duplicate.bl_idname, 'D', 'PRESS', shift=True)
     _keymaps.append((km, kmi))
     sync_keymaps()
 
 
 # ------------------------------------------------------------------------------------- text
-class NKPF_OT_add_text(bpy.types.Operator):
+class NKDRAW_OT_add_text(bpy.types.Operator):
     """Add a text object lying on the CPlane, at its origin (Tab to type)"""
-    bl_idname = "nkpf.add_text"
+    bl_idname = "nkdraw.add_text"
     bl_label = "Add Text on CPlane"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -135,10 +135,10 @@ class NKPF_OT_add_text(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class NKPF_OT_to_cplane(bpy.types.Operator):
+class NKDRAW_OT_to_cplane(bpy.types.Operator):
     """Lay the selected objects on the CPlane: their rotation becomes the CPlane's and their origin goes
     onto the plane (scale kept)"""
-    bl_idname = "nkpf.to_cplane"
+    bl_idname = "nkdraw.to_cplane"
     bl_label = "Lay on CPlane"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -186,11 +186,11 @@ def convert_text(context, text_ob):
     return new[0] if new else None
 
 
-class NKPF_OT_text_to_curves(bpy.types.Operator):
+class NKDRAW_OT_text_to_curves(bpy.types.Operator):
     """Text -> Bezier curves for the pen, Shape Builder and Extrude. The text is kept, hidden: edit it
     again and press Update Curves (it rewrites the same curve object, so its Extrude stays linked;
     point edits made on the curves are replaced)"""
-    bl_idname = "nkpf.text_to_curves"
+    bl_idname = "nkdraw.text_to_curves"
     bl_label = "Text → Curves"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -256,10 +256,10 @@ def _text_of(context, curve_ob):
     return None
 
 
-class NKPF_OT_edit_text(bpy.types.Operator):
+class NKDRAW_OT_edit_text(bpy.types.Operator):
     """Show the text these curves were made from and select it, to change what it says
     (then press Update Curves)"""
-    bl_idname = "nkpf.edit_text"
+    bl_idname = "nkdraw.edit_text"
     bl_label = "Edit Text Again"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -285,21 +285,21 @@ def draw_text_ui(layout, context):
     ob = context.active_object
     col = layout.column(align=True)
     row = col.row(align=True)
-    row.operator(NKPF_OT_add_text.bl_idname, text="Add Text", icon='OUTLINER_OB_FONT')
-    row.operator(NKPF_OT_to_cplane.bl_idname, text="Lay on CPlane", icon='ORIENTATION_CURSOR')
+    row.operator(NKDRAW_OT_add_text.bl_idname, text="Add Text", icon='OUTLINER_OB_FONT')
+    row.operator(NKDRAW_OT_to_cplane.bl_idname, text="Lay on CPlane", icon='ORIENTATION_CURSOR')
     if ob is not None and ob.type == 'FONT':
         has = ob.nkpf_text_curves is not None and ob.nkpf_text_curves.name in context.view_layer.objects
-        col.operator(NKPF_OT_text_to_curves.bl_idname, icon='CURVE_BEZCURVE',
+        col.operator(NKDRAW_OT_text_to_curves.bl_idname, icon='CURVE_BEZCURVE',
                      text="Update Curves" if has else "Text → Curves")
     elif ob is not None and ob.type == 'CURVE' and _text_of(context, ob) is not None:
-        col.operator(NKPF_OT_edit_text.bl_idname, icon='GREASEPENCIL')
+        col.operator(NKDRAW_OT_edit_text.bl_idname, icon='GREASEPENCIL')
 
 
-class NKPF_PT_text(bpy.types.Panel):
+class NKDRAW_PT_text(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "PenForge"
-    bl_parent_id = "PENFORGE_PT_main"
+    bl_category = "Nakan Vector Draw"
+    bl_parent_id = "NKDRAW_PT_main"
     bl_label = "Text"
     bl_order = 52
 
@@ -307,8 +307,8 @@ class NKPF_PT_text(bpy.types.Panel):
         draw_text_ui(self.layout, context)
 
 
-classes = (NKPF_OT_plane_transform, NKPF_OT_plane_duplicate, NKPF_OT_add_text, NKPF_OT_to_cplane, NKPF_OT_text_to_curves,
-           NKPF_OT_edit_text, NKPF_PT_text)
+classes = (NKDRAW_OT_plane_transform, NKDRAW_OT_plane_duplicate, NKDRAW_OT_add_text, NKDRAW_OT_to_cplane, NKDRAW_OT_text_to_curves,
+           NKDRAW_OT_edit_text, NKDRAW_PT_text)
 
 
 def register():

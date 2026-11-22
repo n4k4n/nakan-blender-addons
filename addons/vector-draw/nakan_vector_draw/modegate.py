@@ -4,13 +4,13 @@
 - Every other panel is greyed out while the mode is off (the shortcuts are off too, see __init__).
 - While the mode is on, the target collection is the active collection, and every new curve / text
   (pen, shapes, Shape Builder, copies, text) is moved into it. Empty field = a collection named
-  "Vector Mode", created when needed.
+  "Nakan Vector Draw", created when needed.
 """
 import bpy
 from bpy.app.handlers import persistent
 from bpy.props import PointerProperty
 
-AUTO_NAME = "Vector Mode"
+AUTO_NAME = "Nakan Vector Draw"
 KINDS = {'CURVE', 'FONT'}
 _known = set()
 
@@ -24,7 +24,7 @@ def prefs():
 
 def mode_on():
     p = prefs()
-    return bool(p is not None and p.penforge_mode)
+    return bool(p is not None and p.vector_mode)
 
 
 # ------------------------------------------------------------------------------ grey out panels
@@ -125,7 +125,7 @@ def on_depsgraph(scene, depsgraph):
         from . import surface
         surface.auto_wrap(scene, new)            # Draw on: Object -> projected on the surface
     except Exception as e:  # noqa: BLE001
-        print("Nakan Extras for PenForge (surface):", e)
+        print("Nakan Vector Draw (surface):", e)
     new = [o for o in new if o.type in KINDS]
     if not new:
         return
@@ -160,17 +160,17 @@ def _coll_changed(self, context):
 
 
 # ------------------------------------------------------------------------------------- panel
-class NKPF_PT_mode_top(bpy.types.Panel):
+class NKDRAW_PT_mode_top(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "PenForge"
+    bl_category = "Nakan Vector Draw"
     bl_label = "Vector Mode"
     bl_order = 0
 
     def draw_header(self, context):
         p = prefs()
         if p is not None:
-            self.layout.prop(p, "penforge_mode", text="")
+            self.layout.prop(p, "vector_mode", text="")
 
     def draw(self, context):
         lay = self.layout
@@ -188,9 +188,6 @@ class NKPF_PT_mode_top(bpy.types.Panel):
         surface.draw_ui(box, context)
         if p is not None:
             col.prop(p, "move_on_select")
-        row = col.row(align=True)
-        row.operator("nkpf.contour", text="Contour", icon='MOD_SKIN')
-        row.operator("nkpf.split", text="Split", icon='MOD_EXPLODE')
         r = col.row()
         r.scale_y = 0.7
         r.label(text="G / R / S / Shift+D on the CPlane · P = Pen")
@@ -199,8 +196,8 @@ class NKPF_PT_mode_top(bpy.types.Panel):
 def register():
     bpy.types.Scene.nkpf_collection = PointerProperty(
         type=bpy.types.Collection, name="Collection", update=_coll_changed,
-        description="Where everything made in Vector Mode goes (empty = a \"Vector Mode\" collection)")
-    bpy.utils.register_class(NKPF_PT_mode_top)
+        description="Where everything made in Vector Mode goes (empty = a \"Nakan Vector Draw\" collection)")
+    bpy.utils.register_class(NKDRAW_PT_mode_top)
     bpy.app.timers.register(snapshot, first_interval=0.1)
     if on_depsgraph not in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.append(on_depsgraph)
@@ -215,5 +212,5 @@ def unregister():
         bpy.app.handlers.load_post.remove(on_load)
     if on_depsgraph in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(on_depsgraph)
-    bpy.utils.unregister_class(NKPF_PT_mode_top)
+    bpy.utils.unregister_class(NKDRAW_PT_mode_top)
     del bpy.types.Scene.nkpf_collection

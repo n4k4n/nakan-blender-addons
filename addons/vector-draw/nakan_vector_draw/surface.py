@@ -2,7 +2,7 @@
 
 Every curve / text / solid made while "Draw on: Object" is set gets a Geometry Nodes modifier
 ("NKPF Surface Wrap") that projects it onto the target object along the CPlane normal (the object's
-own local Z: PenForge objects have local axes = CPlane axes). The height above the plane is kept
+own local Z: Vector Draw objects have local axes = CPlane axes). The height above the plane is kept
 along the surface normal, so an Extrude stays an Extrude, now following the curvature.
 The curve itself stays flat on the CPlane: the pen, Shape Builder, booleans, primitives, align and
 G / R / S keep working as on the grid, and the result slides over the surface while you move it.
@@ -218,7 +218,7 @@ def wrap(ob, st):
     if mod is None:
         mod = ob.modifiers.new(MOD, 'NODES')
         mod.node_group = ng
-        # first in the stack: the booleans of PenForge come after and see the wrapped solids
+        # first in the stack: the booleans of Vector Draw come after and see the wrapped solids
         idx = list(ob.modifiers).index(mod)
         if idx > 0:
             try:
@@ -294,9 +294,9 @@ class NKPF_Surface(bpy.types.PropertyGroup):
                            description="Subdivisions of the solids / texts so their faces bend with the surface")
 
 
-class NKPF_OT_wrap(bpy.types.Operator):
+class NKDRAW_OT_wrap(bpy.types.Operator):
     """Project the selected curves / texts / solids on the Surface object (or take the projection off)"""
-    bl_idname = "nkpf.wrap"
+    bl_idname = "nkdraw.wrap"
     bl_label = "Wrap Selected"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -435,10 +435,10 @@ def apply_wrap(ob, context):
     return None
 
 
-class NKPF_OT_apply_wrap(bpy.types.Operator):
+class NKDRAW_OT_apply_wrap(bpy.types.Operator):
     """Make the projection permanent: the selected curves keep the shape they have on the surface
     and no longer depend on the Surface object or on Vector Mode. Texts become meshes"""
-    bl_idname = "nkpf.apply_wrap"
+    bl_idname = "nkdraw.apply_wrap"
     bl_label = "Apply Projection"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -454,7 +454,7 @@ class NKPF_OT_apply_wrap(bpy.types.Operator):
             try:
                 res = apply_wrap(ob, context)
             except Exception as e:
-                print("Nakan Extras for PenForge (apply projection):", e)
+                print("Nakan Vector Draw (apply projection):", e)
                 res = None
             if res is None:
                 failed += 1
@@ -539,9 +539,9 @@ def reproject(ob, target, z_new, nearest=False):
     return True
 
 
-class NKPF_OT_reproject(bpy.types.Operator):
+class NKDRAW_OT_reproject(bpy.types.Operator):
     """Change where the selected drawings are projected from, keeping them where they are on the surface"""
-    bl_idname = "nkpf.reproject"
+    bl_idname = "nkdraw.reproject"
     bl_label = "Re-project"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -602,18 +602,18 @@ def draw_ui(layout, context):
         col.prop(st, "spacing")
         col.prop(st, "subdivide")
         row = layout.row(align=True)
-        row.operator(NKPF_OT_wrap.bl_idname, icon='MOD_SHRINKWRAP', text="Wrap Selected").off = False
-        row.operator(NKPF_OT_wrap.bl_idname, icon='X', text="Unwrap").off = True
-        layout.operator(NKPF_OT_apply_wrap.bl_idname, icon='CHECKMARK')
+        row.operator(NKDRAW_OT_wrap.bl_idname, icon='MOD_SHRINKWRAP', text="Wrap Selected").off = False
+        row.operator(NKDRAW_OT_wrap.bl_idname, icon='X', text="Unwrap").off = True
+        layout.operator(NKDRAW_OT_apply_wrap.bl_idname, icon='CHECKMARK')
         col = layout.column(align=True)
         col.label(text="Re-project from:")
         row = col.row(align=True)
-        row.operator(NKPF_OT_reproject.bl_idname, text="Normal", icon='NORMALS_FACE').source = 'NORMAL'
-        row.operator(NKPF_OT_reproject.bl_idname, text="View", icon='HIDE_OFF').source = 'VIEW'
-        row.operator(NKPF_OT_reproject.bl_idname, text="CPlane", icon='ORIENTATION_CURSOR').source = 'CPLANE'
+        row.operator(NKDRAW_OT_reproject.bl_idname, text="Normal", icon='NORMALS_FACE').source = 'NORMAL'
+        row.operator(NKDRAW_OT_reproject.bl_idname, text="View", icon='HIDE_OFF').source = 'VIEW'
+        row.operator(NKDRAW_OT_reproject.bl_idname, text="CPlane", icon='ORIENTATION_CURSOR').source = 'CPLANE'
 
 
-classes = (NKPF_Surface, NKPF_OT_wrap, NKPF_OT_apply_wrap, NKPF_OT_reproject)
+classes = (NKPF_Surface, NKDRAW_OT_wrap, NKDRAW_OT_apply_wrap, NKDRAW_OT_reproject)
 
 
 def register():
