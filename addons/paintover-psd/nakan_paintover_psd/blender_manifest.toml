@@ -1,0 +1,16 @@
+schema_version = "1.0.0"
+
+id = "nakan_paintover_psd"
+version = "1.0.0"
+name = "Nakan Paintover PSD"
+tagline = "Render to a layered PSD with masks and shadows, ready to paint over"
+maintainer = "Nakan"
+type = "add-on"
+
+blender_version_min = "4.2.0"
+
+license = ["SPDX:GPL-3.0-or-later"]
+tags = ["Render", "Import-Export"]
+
+[permissions]
+files = "Save the PSD next to the .blend and read EXR files"
