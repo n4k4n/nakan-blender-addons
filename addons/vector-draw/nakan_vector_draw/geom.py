@@ -113,7 +113,13 @@ def scene_plane(scene, view_matrix=None, kind=None):
     st = scene.nkdraw
     k = kind or st.cplane
     cur = scene.cursor
-    pl = make_plane(k, cur.location, cur.rotation_euler, view_matrix)
+    ob = getattr(st, "plane_object", None) if k == 'OBJECT' else None
+    if ob is not None:
+        m = ob.matrix_world
+        r3 = m.to_3x3()
+        pl = Plane(m.translation.copy(), r3.col[0].normalized(), r3.col[1].normalized(), "Object")
+    else:
+        pl = make_plane('TOP' if k == 'OBJECT' else k, cur.location, cur.rotation_euler, view_matrix)
     off = tuple(getattr(st, "cplane_offset", (0.0, 0.0, 0.0)))
     if any(abs(a) > 1e-9 for a in off):
         B = Matrix((pl.x, pl.y, pl.n)).transposed()

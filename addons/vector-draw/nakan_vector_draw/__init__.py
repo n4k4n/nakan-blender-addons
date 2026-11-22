@@ -9,7 +9,7 @@ added. Licensed under the GPL-3.0-or-later, like the original."""
 bl_info = {
     "name": "Nakan Vector Draw",
     "author": "Nakan (based on PenForge by Enrico Biancardi)",
-    "version": (1, 0, 0),
+    "version": (1, 1, 0),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > Nakan Vector Draw  |  Ctrl+Shift+P in Object Mode",
     "description": "Vector drawing: an Illustrator-style pen, live shapes, Shape Builder, Repeat, snaps",
@@ -28,7 +28,7 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, FloatVectorProperty, IntProperty, PointerProperty
 
 from . import grid, ui, shapebuilder, copytool
-from . import shapes, align, automove, planar, modegate, surface, contour, split, repeat
+from . import shapes, align, automove, planar, modegate, surface, contour, split, repeat, planeobj
 _PANELS = tuple(ui.PANELS)
 _OPS = (ui.NKDRAW_OT_pen, ui.NKDRAW_OT_cplane_face, ui.NKDRAW_OT_cplane_world, ui.NKDRAW_OT_key_points,
         ui.NKDRAW_OT_cplane_rotate, ui.NKDRAW_OT_cplane_apply, ui.NKDRAW_OT_mirror)
@@ -122,7 +122,14 @@ class NkDrawSettings(bpy.types.PropertyGroup):
         ('CURSOR', "Cursor", "The 3D cursor's own plane: align the cursor to a face (Shift+right drag) "
                              "to draw on it"),
         ('VIEW', "View", "Parallel to the screen through the 3D cursor"),
+        ('OBJECT', "Object", "The Plane Object: an empty you move and rotate freely (Create it in the "
+                             "Drawing Plane panel)"),
     ], update=lambda s, c: grid.redraw())
+    plane_object: PointerProperty(type=bpy.types.Object, name="Plane Object",
+                                  poll=lambda s, o: o.type == 'EMPTY',
+                                  description="The empty that holds the drawing plane when the plane is set to Object")
+    saved_planes: bpy.props.CollectionProperty(type=planeobj.NKDRAW_SavedPlane)
+    saved_index: IntProperty(name="Saved plane", default=0, min=0)
 
 
 class NkDrawPreferences(bpy.types.AddonPreferences):
@@ -178,6 +185,7 @@ def register():
               "Nakan Vector Draw again." % other)
         raise RuntimeError("Nakan Vector Draw: disable the add-on '%s' first (older version of this add-on)" % other)
     bpy.utils.register_class(NkDrawPreferences)
+    planeobj.register_types()
     bpy.utils.register_class(NkDrawSettings)
     bpy.types.Scene.nkdraw = PointerProperty(type=NkDrawSettings)
     shapes.guard(shapebuilder.NKDRAW_OT_shape_builder, "invoke")
@@ -197,6 +205,7 @@ def register():
     shapes.register()
     align.register()
     repeat.register()
+    planeobj.register()
     planar.register()
     contour.register()
     split.register()
@@ -247,6 +256,7 @@ def unregister():
     contour.unregister()
     planar.unregister()
     repeat.unregister()
+    planeobj.unregister()
     align.unregister()
     shapes.unregister()
     automove.unregister()
@@ -260,4 +270,5 @@ def unregister():
     shapebuilder.unregister()
     del bpy.types.Scene.nkdraw
     bpy.utils.unregister_class(NkDrawSettings)
+    planeobj.unregister_types()
     bpy.utils.unregister_class(NkDrawPreferences)

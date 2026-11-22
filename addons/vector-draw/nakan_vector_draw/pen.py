@@ -1346,8 +1346,9 @@ class PenSession:
             self.compute_cursor(mx, my, ev)
             return 'RUNNING'
         if t == 'TAB':
-            i = PLANES.index(self.st.cplane) if self.st.cplane in PLANES else 0
-            self.st.cplane = PLANES[(i + 1) % len(PLANES)]
+            planes = PLANES + (['OBJECT'] if getattr(self.st, "plane_object", None) is not None else [])
+            i = planes.index(self.st.cplane) if self.st.cplane in planes else 0
+            self.st.cplane = planes[(i + 1) % len(planes)]
             self.message = "CPlane: %s" % self.st.cplane.title()
             self.compute_cursor(mx, my, ev)
             return 'RUNNING'

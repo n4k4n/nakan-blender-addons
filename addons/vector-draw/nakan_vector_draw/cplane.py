@@ -50,10 +50,21 @@ def apply_frame(context, frame):
     origin, x, y, n, _name = frame
     m = Matrix((x, y, n)).transposed().to_4x4()
     m.translation = origin
-    cur = context.scene.cursor
-    cur.matrix = m
-    context.scene.nkdraw.cplane = 'CURSOR'
-    context.scene.nkdraw.cplane_offset = (0.0, 0.0, 0.0)
+    write_matrix(context, m)
+
+
+def write_matrix(context, m):
+    """Make `m` (columns X, Y, normal, origin) the drawing plane: into the Plane Object when the plane is set
+    to Object, otherwise into the 3D cursor (plane = Cursor)."""
+    st = context.scene.nkdraw
+    ob = getattr(st, "plane_object", None)
+    if st.cplane == 'OBJECT' and ob is not None:
+        sca = ob.matrix_world.to_scale()
+        ob.matrix_world = Matrix.LocRotScale(m.translation, m.to_quaternion(), sca)
+    else:
+        context.scene.cursor.matrix = m
+        st.cplane = 'CURSOR'
+    st.cplane_offset = (0.0, 0.0, 0.0)
 
 
 def set_world(context, kind='TOP'):
@@ -83,7 +94,14 @@ def current_matrix(context, view_matrix=None):
 
 def move_origin(context, p):
     """CPlane (and grid) to `p`, rotation unchanged."""
-    context.scene.cursor.location = Vector(p)
+    st = context.scene.nkdraw
+    ob = getattr(st, "plane_object", None)
+    if st.cplane == 'OBJECT' and ob is not None:
+        mw = ob.matrix_world.copy()
+        mw.translation = Vector(p)
+        ob.matrix_world = mw
+    else:
+        context.scene.cursor.location = Vector(p)
 
 
 def rotate(context, pivot, axis, angle, view_matrix=None):
@@ -95,11 +113,7 @@ def rotate(context, pivot, axis, angle, view_matrix=None):
     R = Matrix.Rotation(angle, 4, axis.normalized())
     piv = Vector(pivot)
     new = Matrix.Translation(piv) @ R @ Matrix.Translation(-piv) @ m
-    cur = context.scene.cursor
-    cur.matrix = new
-    st = context.scene.nkdraw
-    st.cplane = 'CURSOR'
-    st.cplane_offset = (0.0, 0.0, 0.0)          # the live turn is now part of the CPlane
+    write_matrix(context, new)                  # the live turn is now part of the CPlane
     return True
 
 
@@ -117,11 +131,7 @@ def rotate_local(context, which, angle, view_matrix=None):
 
 def apply_turn(context, view_matrix=None):
     """Make the live turn part of the CPlane (3D cursor rotation) and reset the X / Y / Z values to 0."""
-    st = context.scene.nkdraw
-    m = current_matrix(context, view_matrix)
-    context.scene.cursor.matrix = m
-    st.cplane = 'CURSOR'
-    st.cplane_offset = (0.0, 0.0, 0.0)
+    write_matrix(context, current_matrix(context, view_matrix))
 
 
 class _PickSettings:
@@ -154,10 +164,7 @@ def pick(context, view, cache, mx, my, visible=None):
 def _set_frame(context, origin, x, y, z):
     m = Matrix((x, y, z)).transposed().to_4x4()
     m.translation = Vector(origin)
-    context.scene.cursor.matrix = m
-    st = context.scene.nkdraw
-    st.cplane = 'CURSOR'
-    st.cplane_offset = (0.0, 0.0, 0.0)
+    write_matrix(context, m)
 
 
 def align_axis(context, origin, direction, view_matrix=None, axis=None):

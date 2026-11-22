@@ -34,6 +34,14 @@ class NKDRAW_OT_plane_transform(bpy.types.Operator):
         return context.mode == 'OBJECT' and bool(context.selected_objects)
 
     def invoke(self, context, event):
+        st = getattr(context.scene, "nkdraw", None)
+        po = getattr(st, "plane_object", None)
+        if po is not None and po in context.selected_objects:
+            # the Plane Object itself: Blender's free transforms, any angle
+            op = {'MOVE': bpy.ops.transform.translate, 'ROTATE': bpy.ops.transform.rotate,
+                  'SCALE': bpy.ops.transform.resize}[self.mode]
+            op('INVOKE_DEFAULT')
+            return {'FINISHED'}
         _o, R = common.cplane_frame(context.scene)
         M = Matrix(R)
         kw = dict(orient_matrix=M, orient_matrix_type='GLOBAL')

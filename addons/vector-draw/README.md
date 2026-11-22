@@ -20,6 +20,8 @@ I draw a lot of flat and stylized work in Blender, and I wanted to stop jumping 
 - **Text** that stays editable on the drawing plane.
 - **Vector Mode**: G, R and S move, rotate and scale on the drawing plane, Shift+D duplicates on it, P opens the pen.
 - **Drawing plane and grid**: draw on Top, Front, Right, the 3D cursor, the view, or pick a face.
+- **Plane Object**: the drawing plane as an empty you can move and rotate at any angle, put on the 3D cursor, send back to the world origin, or match to the plane of a shape.
+- **Saved planes**: keep the planes you set up and go back to any of them later. Handy for the Shape Builder, which works on shapes drawn on the same plane.
 
 ## How to use
 
@@ -31,8 +33,9 @@ I draw a lot of flat and stylized work in Blender, and I wanted to stop jumping 
 6. To make copies, select a shape and click **Radial**, **Grid** or **Mirror** in the **Repeat** panel. Change the number of copies, the angle, the spacing or the axis there. Edit the original and the copies follow. Click **Expand** when you want them as separate curves.
 7. Select overlapping closed shapes and click **Shape Builder**. Drag across regions to merge them, Alt+drag to delete them, Enter to finish.
 8. Select several objects and use **Align & Distribute** to line them up.
-9. To draw on an object, set **Draw on** to **Object** in the Vector Mode panel and pick the surface. Click **Apply Projection** when it looks right.
-10. Turn Vector Mode off to go back to Blender's normal transforms.
+9. To draw on a tilted plane, click **Plane Object** in the **Drawing Plane & Grid** panel and move or rotate the empty that appears (G and R work freely on it, at any angle). **3D Cursor** and **World Origin** move it there, **From Shape** matches it to the plane of the active shape. Click **+** under **Saved planes** to keep it, and the check mark next to a saved plane to go back to it.
+10. To draw on an object, set **Draw on** to **Object** in the Vector Mode panel and pick the surface. Click **Apply Projection** when it looks right.
+11. Turn Vector Mode off to go back to Blender's normal transforms.
 
 Requires Blender 4.2 or newer.
 

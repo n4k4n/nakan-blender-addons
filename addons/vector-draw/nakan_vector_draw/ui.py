@@ -877,15 +877,16 @@ class NKDRAW_PT_osnap(_Sub, bpy.types.Panel):
 
 class NKDRAW_PT_cplane(_Sub, bpy.types.Panel):
     bl_label = "Drawing Plane & Grid"
-    bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
         st = context.scene.nkdraw
         lay = self.layout
         lay.row(align=True).prop(st, "cplane", expand=True)
+        from . import planeobj
+        planeobj.draw_panel(lay, context)
+        lay.separator()
         row = lay.row(align=True)
-        row.operator(NKDRAW_OT_cplane_face.bl_idname, text="Pick", icon='EYEDROPPER')
-        row.operator(NKDRAW_OT_cplane_world.bl_idname, text="World", icon='WORLD')
+        row.operator(NKDRAW_OT_cplane_face.bl_idname, text="Pick a Face", icon='EYEDROPPER')
         col = lay.column(align=True)
         col.label(text="Turn the CPlane (live)")
         col.row(align=True).prop(st, "cplane_offset", text="")
