@@ -9,7 +9,7 @@ added. Licensed under the GPL-3.0-or-later, like the original."""
 bl_info = {
     "name": "Nakan Vector Draw",
     "author": "Nakan (based on PenForge by Enrico Biancardi)",
-    "version": (1, 3, 1),
+    "version": (1, 3, 2),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > Nakan Vector Draw  |  Ctrl+Shift+P in Object Mode",
     "description": "Vector drawing: an Illustrator-style pen, live shapes, Shape Builder, Repeat, snaps",
@@ -142,7 +142,7 @@ class NkDrawPreferences(bpy.types.AddonPreferences):
     vector_mode: BoolProperty(
         name="Vector Mode",
         description="Switches the whole Nakan Vector Draw on: tools, shortcuts (Ctrl+Shift+P, P, G / R / S on the "
-                    "CPlane) and the target collection",
+                    "CPlane) and the target collection. Always off when Blender starts",
         default=False, update=_mode_changed)
     move_on_select: BoolProperty(
         name="Move on select",
@@ -226,6 +226,11 @@ def _sync_after_start():
     p = prefs()
     if p is None:
         return 0.5
+    if p.vector_mode:
+        try:
+            p.vector_mode = False                # Vector Mode always starts off: turn it on when you need it
+        except (AttributeError, RuntimeError):
+            pass
     on = bool(p.vector_mode)
     for _km, _kmi in _keymaps:
         try:
