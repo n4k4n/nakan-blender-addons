@@ -7,6 +7,7 @@ I draw a lot of flat and stylized work in Blender, and I wanted to stop jumping 
 ## Features
 
 - **Pen**: click for corners, drag for smooth points, Alt to convert or break handles, Ctrl to select points directly. Type lengths and angles while drawing (`3.5`, `<45`, `3.5<45`, `x,y`).
+- **Direct Selection** (the white arrow, A): drag anchors, handles and segments of the curves on the plane without adding points. Click an anchor to select it, Shift+click to add more, Ctrl+drag a box.
 - **Rectangle, Circle and Polygon** drawn corner to corner, Shift for square, Alt from the centre.
 - **Live Shapes**: rectangles with roundness per corner, ellipses that turn into drops, polygons that turn into stars. Editable until you click Convert to Curves.
 - **Snap**: anchors, midpoints, centres, intersections, perpendicular, on curve and grid, plus smart guides that line the cursor up with points you hovered.
@@ -28,14 +29,15 @@ I draw a lot of flat and stylized work in Blender, and I wanted to stop jumping 
 1. Download the `.zip` from [Releases](../../../../releases) and install it with **Edit > Preferences > Get Extensions > Install from Disk** (or drag it into Blender). If you have Nakan Vector Tools or Nakan Extras for PenForge, disable them first.
 2. Open the **Nakan Vector Draw** tab in the Sidebar (N) and turn on **Vector Mode** at the top.
 3. Click **Pen** (or Ctrl+Shift+P). Click to place corners, drag to make smooth points, click the first point to close the shape. Enter finishes, Esc leaves.
-4. While drawing, **D** turns snapping on and off and **S** opens the snap menu (click a name to use it once). The **Snap**, **Grid** and **Guides** buttons in the panel do the same from outside the pen.
-5. Use **Rect**, **Circle** or **Polygon** for shapes. Change their size, roundness or points later in the **Primitive** panel. Click **Convert to Curves** when you want to edit their points with the pen.
-6. To make copies, select a shape and click **Radial**, **Grid** or **Mirror** in the **Repeat** panel. Change the number of copies, the angle, the spacing or the axis there. Edit the original and the copies follow. Click **Expand** when you want them as separate curves.
-7. Select overlapping closed shapes and click **Shape Builder**. Drag across regions to merge them, Alt+drag to delete them, Enter to finish.
-8. Select several objects and use **Align & Distribute** to line them up.
-9. To draw on a tilted plane, click **Plane Object** in the **Drawing Plane & Grid** panel and move or rotate the empty that appears (G and R work freely on it, at any angle). **3D Cursor** and **World Origin** move it there, **From Shape** matches it to the plane of the active shape. Click **+** under **Saved planes** to keep it, and the check mark next to a saved plane to go back to it.
-10. To draw on an object, set **Draw on** to **Object** in the Vector Mode panel and pick the surface. Click **Apply Projection** when it looks right.
-11. Turn Vector Mode off to go back to Blender's normal transforms.
+4. To edit curves without adding points, click **Direct Select** (or press **A** inside the pen). Drag anchors, handles or segments; Alt still converts corners and handles. **P** goes back to the pen.
+5. While drawing, **D** turns snapping on and off and **S** opens the snap menu (click a name to use it once). The **Snap**, **Grid** and **Guides** buttons in the panel do the same from outside the pen.
+6. Use **Rect**, **Circle** or **Polygon** for shapes. Change their size, roundness or points later in the **Primitive** panel. Click **Convert to Curves** when you want to edit their points with the pen.
+7. To make copies, select a shape and click **Radial**, **Grid** or **Mirror** in the **Repeat** panel. Change the number of copies, the angle, the spacing or the axis there. Edit the original and the copies follow. Click **Expand** when you want them as separate curves.
+8. Select overlapping closed shapes and click **Shape Builder**. Drag across regions to merge them, Alt+drag to delete them, Enter to finish.
+9. Select several objects and use **Align & Distribute** to line them up.
+10. To draw on a tilted plane, click **Plane Object** in the **Drawing Plane & Grid** panel and move or rotate the empty that appears (G and R work freely on it, at any angle). **3D Cursor** and **World Origin** move it there, **From Shape** matches it to the plane of the active shape. Click **+** under **Saved planes** to keep it, and the check mark next to a saved plane to go back to it.
+11. To draw on an object, set **Draw on** to **Object** in the Vector Mode panel and pick the surface. Click **Apply Projection** when it looks right.
+12. Turn Vector Mode off to go back to Blender's normal transforms.
 
 Requires Blender 4.2 or newer.
 

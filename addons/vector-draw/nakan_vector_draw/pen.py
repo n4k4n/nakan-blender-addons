@@ -34,8 +34,9 @@ PICK_PX = 9.0
 DRAG_PX = 4.0
 PLANES = ['TOP', 'FRONT', 'RIGHT', 'CURSOR', 'VIEW']
 MODKEYS = {'LEFT_SHIFT', 'RIGHT_SHIFT', 'LEFT_CTRL', 'RIGHT_CTRL', 'LEFT_ALT', 'RIGHT_ALT'}
-TOOL_NAMES = {'PEN': "Pen", 'RECT': "Rectangle", 'CIRCLE': "Circle", 'POLY': "Polygon"}
-TOOL_KEYS = {'P': 'PEN', 'M': 'RECT', 'L': 'CIRCLE', 'Y': 'POLY'}     # Illustrator letters
+TOOL_NAMES = {'PEN': "Pen", 'EDIT': "Direct Selection", 'RECT': "Rectangle", 'CIRCLE': "Circle", 'POLY': "Polygon"}
+TOOL_KEYS = {'P': 'PEN', 'A': 'EDIT', 'M': 'RECT', 'L': 'CIRCLE', 'Y': 'POLY'}     # Illustrator letters
+PATH_TOOLS = ('PEN', 'EDIT')      # tools that work on the paths (the others draw shapes)
 # Osnap pop-up menu (S while the command runs): (setting, label, key)
 MENU_ITEMS = [("osnap", "Snap (all)", 'D'), None,
               ("snap_end", "End", 'E'), ("snap_vert", "Vertex", 'V'), ("snap_mid", "Mid", 'M'),
@@ -147,6 +148,17 @@ class Path:
         self.pts.reverse()
         for p in self.pts:
             p.hl, p.hr = p.hr, p.hl
+
+
+class _EditEvent:
+    """An event seen as if Ctrl were held (Direct Selection), unless Alt converts points."""
+
+    def __init__(self, ev):
+        self._ev = ev
+        self.ctrl = not ev.alt
+
+    def __getattr__(self, name):
+        return getattr(self._ev, name)
 
 
 class PenSession:
@@ -351,7 +363,7 @@ class PenSession:
         return geom.scene_plane(sc, vm)
 
     def last_point(self):
-        if self.tool != 'PEN':
+        if self.tool not in PATH_TOOLS:
             return Pt(self.anchor) if self.anchor is not None else None
         if self.state in ("DRAW", "DRAG_NEW") and self.active is not None:
             P = self.paths[self.active]
@@ -784,7 +796,7 @@ class PenSession:
     def mirror_preview(self):
         """Mirrored copy of the curve being drawn (polylines) and the mirror axis (2 points), world space."""
         mp = self.mirror_plane()
-        if mp is None or self.tool != 'PEN':
+        if mp is None or self.tool not in PATH_TOOLS:
             return [], []
         o, m, d = mp
         strips = []
@@ -914,7 +926,7 @@ class PenSession:
         rel = txt[:1] in ("@", "r", "R")
         if rel:
             txt = txt[1:].strip()
-        if self.tool != 'PEN' and self.anchor is not None:
+        if self.tool not in PATH_TOOLS and self.anchor is not None:
             return self.apply_shape_buffer(txt)
         if "," in txt and "<" not in txt:
             parts = [self._to_bu(t) for t in txt.split(",")]
@@ -1203,7 +1215,7 @@ class PenSession:
         mx, my = ev.mouse_region_x, ev.mouse_region_y
         t, v = ev.type, ev.value
         self.mods = (ev.shift, ev.alt)
-        shape = self.tool != 'PEN'
+        shape = self.tool not in PATH_TOOLS
         if self.menu is not None:
             r = self._menu_event(ev, mx, my)
             if self.menu is None:
@@ -1468,7 +1480,7 @@ class PenSession:
         return pts, c, "%d sides   R %s   side %s" % (n, fmt(r), fmt(side))
 
     def shape_preview(self):
-        if self.tool == 'PEN' or self.anchor is None or self.cursor is None:
+        if self.tool in PATH_TOOLS or self.anchor is None or self.cursor is None:
             return [], ""
         pts, _c, info = self.shape_geometry(self.anchor, self.cursor, *self.mods)
         P = Path(pts, True)
@@ -1667,6 +1679,8 @@ class PenSession:
                      "b0": geom.bez(p0, p1, p2, p3, t), "p1": p1.copy(), "p2": p2.copy()}
 
     def _on_press(self, mx, my, ev):
+        if self.tool == 'EDIT':
+            ev = _EditEvent(ev)                 # Direct Selection: always the pen's Ctrl behaviour
         m = Vector((mx, my))
         self.last_round = None
         if self.state == "IDLE" and not ev.alt:
@@ -2164,6 +2178,12 @@ class PenSession:
                 self.sel ^= {key}                     # Ctrl+Shift+click: add / remove one anchor
                 self.message = "%d point(s) selected" % len(self.sel)
                 return
+            if kind == "move" and self.tool == 'EDIT':
+                self.history.pop() if self.history else None
+                _k, pi, i = d["click"]
+                self.sel = {(pi, i)}                  # Direct Selection: a click selects the anchor
+                self.message = "1 point selected \u00b7 drag it, or Shift+click to add more"
+                return
             if kind == "move" and d.get("ctrl"):
                 _k, pi, i = d["click"]
                 self.toggle_tangent(pi, i)
@@ -2189,11 +2209,11 @@ class PenSession:
                 _k, pi, i = d["click"]
                 self.toggle_point(pi, i)
             elif kind == "seg":
-                self.history.pop() if self.history else None
                 if d.get("alt"):
+                    self.history.pop() if self.history else None
                     self.toggle_segment(d["path"], d["i"])
                 else:
-                    self.undo_silent()
+                    self.undo_silent()                # a click on a segment: back to the state of the press
             elif kind == "lasth":
                 P = self.paths[d["path"]]
                 p = P.pts[d["i"]]
@@ -2266,7 +2286,7 @@ class PenSession:
     # ------------------------------------------------------------ display data
     def preview(self):
         """Rubber band from the last point to the cursor (world points)."""
-        if self.tool != 'PEN' or self.active is None or self.menu is not None:
+        if self.tool not in PATH_TOOLS or self.active is None or self.menu is not None:
             return []
         last = self.last_point()
         if last is None or self.cursor is None or self.drag is not None:

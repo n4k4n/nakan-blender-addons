@@ -26,14 +26,17 @@ HELP = {
     'PEN': ("Click corner \u00b7 Drag smooth \u00b7 Alt convert/break \u00b7 Ctrl direct select \u00b7 Shift 45\u00b0 \u00b7 "
             "Shift+click a point = new path from it \u00b7 hover a snap then move = tracking \u00b7 "
             "1st point/C close \u00b7 Enter finish \u00b7 Backspace undo \u00b7 D osnap \u00b7 Type 3.5  <45  x,y  R1,0 \u00b7 "
-            "P pen  M rect  L circle  Y polygon \u00b7 Tab CPlane \u00b7 F pick CPlane (also mid-curve) \u00b7 Shift+F stand up on last segment \u00b7 Shift+M mirror \u00b7 S Osnap \u00b7 "
+            "P pen  A direct select  M rect  L circle  Y polygon \u00b7 Tab CPlane \u00b7 F pick CPlane (also mid-curve) \u00b7 Shift+F stand up on last segment \u00b7 Shift+M mirror \u00b7 S Osnap \u00b7 "
             "Q/Shift+Q/Alt+Q turn CPlane \u00b7 Ctrl+drag box select \u00b7 K keyframe \u00b7 \u2190\u2192 frame  \u2191\u2193 keyframe"),
+    'EDIT': ("Drag anchor / handle / segment \u00b7 click anchor = select \u00b7 Shift+click add to selection \u00b7 "
+             "Ctrl+drag box select \u00b7 Alt convert/break \u00b7 X/Del delete point \u00b7 snaps on \u00b7 "
+             "P pen  A direct select  M rect  L circle  Y polygon \u00b7 Enter/Esc leave"),
     'RECT': ("Click/drag corner to corner \u00b7 Shift square \u00b7 Alt from centre \u00b7 Type w,h \u00b7 "
-             "P pen  M rect  L circle  Y polygon \u00b7 Tab CPlane \u00b7 Enter/Esc cancel/leave \u00b7 S Osnap"),
+             "P pen  A direct select  M rect  L circle  Y polygon \u00b7 Tab CPlane \u00b7 Enter/Esc cancel/leave \u00b7 S Osnap"),
     'CIRCLE': ("Click/drag corner to corner (inscribed in the square) \u00b7 Alt from centre \u00b7 Type the radius \u00b7 "
-               "P pen  M rect  L circle  Y polygon \u00b7 Tab CPlane \u00b7 S Osnap"),
+               "P pen  A direct select  M rect  L circle  Y polygon \u00b7 Tab CPlane \u00b7 S Osnap"),
     'POLY': ("Click/drag corner to corner (inscribed) \u00b7 Alt from centre (Shift flat edge) \u00b7 Up/Down sides \u00b7 Type the radius \u00b7 "
-             "P pen  M rect  L circle  Y polygon \u00b7 Tab CPlane \u00b7 S Osnap"),
+             "P pen  A direct select  M rect  L circle  Y polygon \u00b7 Tab CPlane \u00b7 S Osnap"),
 }
 
 
@@ -129,7 +132,7 @@ def _shown(S):
     """Paths whose anchors/handles are drawn: the one being drawn, the one under the mouse and
     the last one edited (like Illustrator shows only the selected path)."""
     out = set()
-    if S.tool != 'PEN':
+    if S.tool not in pen.PATH_TOOLS:
         return out
     if S.active is not None:
         out.add(S.active)
@@ -212,7 +215,7 @@ def _hint(S, ev_alt, ev_ctrl=False):
     if S.drag is None and getattr(S, "hover_widget", None) is not None:
         hw = S.hover_widget
         return ("drag: change the radius" if hw[2] == "arc" else "drag: round corner") + " \u00b7 Ctrl: grid steps"
-    if S.tool != 'PEN':
+    if S.tool not in pen.PATH_TOOLS:
         if S.anchor is None:
             return {'RECT': "first corner (Alt: centre)", 'CIRCLE': "first corner (Alt: centre)",
                     'POLY': "first corner (Alt: centre) \u00b7 %d sides" % S.st.poly_sides}[S.tool]
@@ -418,7 +421,9 @@ class NKDRAW_OT_pen(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     tool: bpy.props.EnumProperty(name="Tool", default='PEN', items=[
-        ('PEN', "Pen", "Draw and edit curves"), ('RECT', "Rectangle", "Rectangle / square"),
+        ('PEN', "Pen", "Draw and edit curves"),
+        ('EDIT', "Direct Selection", "Edit the points of the curves on the plane without adding new ones"),
+        ('RECT', "Rectangle", "Rectangle / square"),
         ('CIRCLE', "Circle", "Circle"), ('POLY', "Polygon", "Regular polygon")])
 
     @classmethod
@@ -448,8 +453,9 @@ class NKDRAW_OT_pen(bpy.types.Operator):
         context.window.cursor_modal_set('CROSSHAIR')
         context.workspace.status_text_set(HELP[self.tool])
         self._tool_shown = self.tool
-        self.session.message = ("Click to draw, or click any curve to edit it" if self.tool == 'PEN'
-                                else pen.SHAPE_HINT[self.tool])
+        self.session.message = ("Click to draw, or click any curve to edit it" if self.tool == 'PEN' else
+                                "Drag points, handles or segments \u00b7 Ctrl+drag a box to select points"
+                                if self.tool == 'EDIT' else pen.SHAPE_HINT[self.tool])
         return {'RUNNING_MODAL'}
 
     def _cleanup(self, context):
@@ -813,6 +819,7 @@ class NKDRAW_PT_main(bpy.types.Panel):
         row = col.row(align=True)
         row.scale_y = 1.6
         row.operator(NKDRAW_OT_pen.bl_idname, text="Pen", icon='GREASEPENCIL').tool = 'PEN'
+        row.operator(NKDRAW_OT_pen.bl_idname, text="Direct Select", icon='RESTRICT_SELECT_OFF').tool = 'EDIT'
         row = col.row(align=True)
         row.scale_y = 1.2
         row.operator(NKDRAW_OT_pen.bl_idname, text="Rect", icon='MESH_PLANE').tool = 'RECT'
