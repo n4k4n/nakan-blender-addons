@@ -9,7 +9,7 @@ added. Licensed under the GPL-3.0-or-later, like the original."""
 bl_info = {
     "name": "Nakan Vector Draw",
     "author": "Nakan (based on PenForge by Enrico Biancardi)",
-    "version": (1, 2, 0),
+    "version": (1, 3, 0),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > Nakan Vector Draw  |  Ctrl+Shift+P in Object Mode",
     "description": "Vector drawing: an Illustrator-style pen, live shapes, Shape Builder, Repeat, snaps",

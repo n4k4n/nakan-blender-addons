@@ -191,6 +191,8 @@ class PenSession:
         self.hover = None                 # ('pt', path, i) | ('seg', path, i, t) | ('hl'/'hr', path, i)
         self.drag = None
         self.sel = set()                  # selected anchors {(path, index)} (Ctrl+drag a box)
+        self.sel_handle = None            # Direct Selection: selected handle (path, index, 'hl' / 'hr')
+        self.xform = None                 # Direct Selection: G / R / S running on the selection
         self.box = None                   # marquee being dragged: (start, end) in region pixels
         self.message = ""
         self.done = False
@@ -1223,6 +1225,11 @@ class PenSession:
             return r
         if self.face_pick:
             return self._face_event(ev, mx, my)
+        if self.xform is not None:
+            return self._xform_event(ev, mx, my)
+        if self.tool == 'EDIT' and t in {'G', 'R', 'S'} and v == 'PRESS' and not self.buffer \
+                and self.drag is None and not ev.ctrl and not ev.alt and self._xform_start(t, mx, my):
+            return 'RUNNING'
         if t == 'S' and v == 'PRESS' and not self.buffer and self.drag is None:
             self.open_menu(mx, my)
             return 'RUNNING'
@@ -1325,7 +1332,8 @@ class PenSession:
             return 'RUNNING'
 
         ch = getattr(ev, "unicode", "") or ""
-        if ch and ch.isprintable() and (self.buffer or ch in "0123456789.-<@+rR"):
+        if ch and ch.isprintable() and (self.buffer or ch in "0123456789.-<@+" or
+                                        (ch in "rR" and self.tool != 'EDIT')):
             self.buffer += ch
             return 'RUNNING'
         if t == 'D' and not self.drag:
@@ -1533,6 +1541,167 @@ class PenSession:
             return self.commit_shape(self.anchor + d * r, shift, True)
         su, sv = self._mouse_signs(self.anchor, plane)  # the anchor is a corner: the square goes towards the mouse
         return self.commit_shape(self.anchor + plane.x * (2 * r * su) + plane.y * (2 * r * sv), shift, False)
+
+    # ------------------------------------------------------------ Direct Selection: G / R / S
+    def _xform_targets(self):
+        """(kind, items, pivot): 'handle' with [(path, i, side)] around its anchor, or 'points' with the anchors."""
+        if self.sel_handle is not None:
+            pi, i, side = self.sel_handle
+            if pi < len(self.paths) and i < len(self.paths[pi].pts):
+                p = self.paths[pi].pts[i]
+                if p.kind != CORNER:
+                    return "handle", [self.sel_handle], p.co.copy()
+            self.sel_handle = None
+        keys = [k for k in self.sel if k[0] < len(self.paths) and k[1] < len(self.paths[k[0]].pts)]
+        if not keys and self.hover is not None and self.hover[0] == "pt":
+            keys = [(self.hover[1], self.hover[2])]
+        if not keys:
+            return None
+        piv = Vector()
+        for pi, i in keys:
+            piv += self.paths[pi].pts[i].co
+        return "points", keys, piv / len(keys)
+
+    def _xform_start(self, key, mx, my):
+        tg = self._xform_targets()
+        if tg is None:
+            self.message = "Select points or a handle first (click, Shift+click or Ctrl+drag a box)"
+            return False
+        kind, items, piv = tg
+        mode = {'G': 'MOVE', 'R': 'ROTATE', 'S': 'SCALE'}[key]
+        self._push()
+        self._refresh_dynamic(skip={(it[0], it[1]) for it in items})   # don't snap to what is moving
+        snap_ = {}
+        for it in items:
+            pi, i = it[0], it[1]
+            p = self.paths[pi].pts[i]
+            snap_[(pi, i)] = (p.co.copy(), p.hl.copy(), p.hr.copy(), p.kind)
+        start, _plane = self._plane_hit(mx, my, piv)
+        if kind == "handle":
+            pi, i, side = items[0]
+            ref = getattr(self.paths[pi].pts[i], side).copy()
+        else:
+            ref = self.paths[items[0][0]].pts[items[0][1]].co.copy() if len(items) == 1 else piv.copy()
+        self.xform = {"mode": mode, "kind": kind, "items": items, "pivot": piv, "snap": snap_,
+                      "start": start, "ref": ref, "typed": ""}
+        self._xform_apply(mx, my, None)
+        return True
+
+    def _xform_restore(self):
+        X = self.xform
+        for (pi, i), (co, hl, hr, k) in X["snap"].items():
+            p = self.paths[pi].pts[i]
+            p.co, p.hl, p.hr, p.kind = co.copy(), hl.copy(), hr.copy(), k
+
+    def _xform_apply(self, mx, my, ev, typed=None):
+        X = self.xform
+        self._xform_restore()
+        piv, mode = X["pivot"], X["mode"]
+        hit, plane = self._plane_hit(mx, my, piv)
+        n = Vector(plane.n).normalized() if hasattr(plane, "n") else Vector(plane.x).cross(Vector(plane.y)).normalized()
+        if mode == 'MOVE':
+            if typed is not None:
+                return
+            target = self.compute_cursor(mx, my, ev) if ev is not None else hit
+            if target is None or hit is None:
+                return
+            M = Matrix.Translation(Vector(target) - X["ref"])
+            info = "Move %.4g" % (Vector(target) - X["ref"]).length
+        else:
+            a0 = None if X["start"] is None else X["start"] - piv
+            a1 = None if hit is None else hit - piv
+            if mode == 'ROTATE':
+                if typed is not None:
+                    ang = math.radians(typed)
+                else:
+                    if a0 is None or a1 is None or a0.length < 1e-9 or a1.length < 1e-9:
+                        return
+                    ang = math.atan2(n.dot(a0.cross(a1)), a0.dot(a1))
+                    if ev is not None and ev.shift:
+                        ang = round(ang / math.radians(15)) * math.radians(15)
+                M = Matrix.Translation(piv) @ Matrix.Rotation(ang, 4, n) @ Matrix.Translation(-piv)
+                info = "Rotate %.4g\u00b0" % math.degrees(ang)
+            else:
+                if typed is not None:
+                    f = typed
+                else:
+                    if a0 is None or a1 is None or a0.length < 1e-9:
+                        return
+                    f = a1.length / a0.length
+                    if ev is not None and ev.shift:
+                        f = round(f * 10) / 10
+                M = Matrix.Translation(piv) @ Matrix.Scale(f, 4) @ Matrix.Translation(-piv)
+                info = "Scale %.4g" % f
+        if X["kind"] == "handle":
+            pi, i, side = X["items"][0]
+            p = self.paths[pi].pts[i]
+            setattr(p, side, M @ getattr(p, side))
+            if p.kind == CORNER:
+                p.kind = CUSP
+            self._realign(p, side)                     # a smooth point keeps its other handle opposite
+        else:
+            for pi, i in X["items"]:
+                p = self.paths[pi].pts[i]
+                hl, hr = (Vector(h) for h in self.paths[pi].handles(i)) if p.kind == CORNER else (p.hl, p.hr)
+                p.co, p.hl, p.hr = M @ p.co, M @ hl, M @ hr
+        X["info"] = info
+        self.message = info + ("  (typed: %s)" % X["typed"] if X["typed"] else "") + \
+            " \u00b7 click/Enter confirm \u00b7 right click/Esc cancel" + \
+            (" \u00b7 Shift 15\u00b0" if mode == 'ROTATE' else "") + (" \u00b7 type a value" if mode != 'MOVE' else "")
+        for ob in {self.paths[it[0]].ob for it in X["items"]}:
+            self.write(ob)
+
+    def _xform_event(self, ev, mx, my):
+        X = self.xform
+        t, v = ev.type, ev.value
+        if t in {'MOUSEMOVE', 'INBETWEEN_MOUSEMOVE'} or (t in MODKEYS):
+            if not X["typed"]:
+                self._xform_apply(mx, my, ev)
+            return 'RUNNING'
+        if v != 'PRESS':
+            return 'RUNNING'
+        if t in {'LEFTMOUSE', 'RET', 'NUMPAD_ENTER', 'SPACE'}:
+            if X["typed"] and t != 'LEFTMOUSE':
+                try:
+                    self._xform_apply(mx, my, ev, typed=float(X["typed"]))
+                except ValueError:
+                    pass
+            self.xform = None
+            self.message = X.get("info", "") + " \u2713"
+            self._refresh_dynamic()
+            return 'RUNNING'
+        if t in {'RIGHTMOUSE', 'ESC'}:
+            self._xform_restore()
+            for ob in {self.paths[it[0]].ob for it in X["items"]}:
+                self.write(ob)
+            self.xform = None
+            if self.history:
+                self.history.pop()
+            self.message = "Cancelled"
+            return 'RUNNING'
+        if t in {'G', 'R', 'S'} and not X["typed"]:
+            self._xform_restore()
+            self.xform = None
+            if self.history:
+                self.history.pop()
+            self._xform_start(t, mx, my)
+            return 'RUNNING'
+        ch = getattr(ev, "unicode", "") or ""
+        if t == 'BACK_SPACE':
+            X["typed"] = X["typed"][:-1]
+        elif ch and ch in "0123456789.-" and X["mode"] != 'MOVE':
+            X["typed"] += ch
+        else:
+            return 'RUNNING'
+        try:
+            val = float(X["typed"]) if X["typed"] not in ("", "-", ".", "-.") else None
+        except ValueError:
+            val = None
+        if val is None:
+            self._xform_apply(mx, my, ev)
+        else:
+            self._xform_apply(mx, my, ev, typed=val)
+        return 'RUNNING'
 
     def _plane_hit(self, mx, my, through):
         plane = self.work_plane(through)
@@ -2157,6 +2326,7 @@ class PenSession:
                     self.message = "Selection cleared"
                 return
             self._box_select(d["start"], Vector((mx, my)), d.get("add"))
+            self.sel_handle = None
             return
         if moved and kind in ("move", "hl", "hr", "seg", "convert") and self._autokey():
             if kind == "move":
@@ -2182,6 +2352,7 @@ class PenSession:
                 self.history.pop() if self.history else None
                 _k, pi, i = d["click"]
                 self.sel = {(pi, i)}                  # Direct Selection: a click selects the anchor
+                self.sel_handle = None
                 self.message = "1 point selected \u00b7 drag it, or Shift+click to add more"
                 return
             if kind == "move" and d.get("ctrl"):
@@ -2225,6 +2396,10 @@ class PenSession:
                     self.history.pop() if self.history else None
             elif kind in ("hl", "hr"):
                 self.history.pop() if self.history else None
+                if self.tool == 'EDIT':
+                    self.sel_handle = (d["path"], d["i"], kind)   # G / R / S now act on this handle only
+                    self.sel = set()
+                    self.message = "Handle selected \u00b7 G move \u00b7 R rotate \u00b7 S scale its length"
         elif d.get("closing"):
             self.finish_path()
             self.message = "Curve closed"

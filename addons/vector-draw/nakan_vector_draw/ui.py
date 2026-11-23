@@ -28,8 +28,9 @@ HELP = {
             "1st point/C close \u00b7 Enter finish \u00b7 Backspace undo \u00b7 D osnap \u00b7 Type 3.5  <45  x,y  R1,0 \u00b7 "
             "P pen  A direct select  M rect  L circle  Y polygon \u00b7 Tab CPlane \u00b7 F pick CPlane (also mid-curve) \u00b7 Shift+F stand up on last segment \u00b7 Shift+M mirror \u00b7 S Osnap \u00b7 "
             "Q/Shift+Q/Alt+Q turn CPlane \u00b7 Ctrl+drag box select \u00b7 K keyframe \u00b7 \u2190\u2192 frame  \u2191\u2193 keyframe"),
-    'EDIT': ("Drag anchor / handle / segment \u00b7 click anchor = select \u00b7 Shift+click add to selection \u00b7 "
-             "Ctrl+drag box select \u00b7 Alt convert/break \u00b7 X/Del delete point \u00b7 snaps on \u00b7 "
+    'EDIT': ("Drag anchor / handle / segment \u00b7 click anchor or handle = select \u00b7 Shift+click add \u00b7 "
+             "Ctrl+drag box \u00b7 G move  R rotate  S scale the selection (type a value, Shift steps) \u00b7 "
+             "Alt convert/break \u00b7 X/Del delete point \u00b7 "
              "P pen  A direct select  M rect  L circle  Y polygon \u00b7 Enter/Esc leave"),
     'RECT': ("Click/drag corner to corner \u00b7 Shift square \u00b7 Alt from centre \u00b7 Type w,h \u00b7 "
              "P pen  A direct select  M rect  L circle  Y polygon \u00b7 Tab CPlane \u00b7 Enter/Esc cancel/leave \u00b7 S Osnap"),
@@ -327,6 +328,8 @@ def draw_2d(op, context):
                         hs = V.project(h)
                         if hs is not None:
                             hh = hv is not None and hv[0] == side and hv[1] == pi and hv[2] == i
+                            if getattr(S, "sel_handle", None) == (pi, i, side):
+                                _square(hs, 5.0, (1.0, 0.62, 0.15, 1.0))   # selected handle
                             _lines2d(_circle(hs, 4.5 if hh else 3.2, 12), HANDLE, 2.5 if hh else 1.8, True)
     if S.drag is None and hasattr(S, "corner_widgets"):
         hw = getattr(S, "hover_widget", None)

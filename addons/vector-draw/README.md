@@ -7,7 +7,7 @@ I draw a lot of flat and stylized work in Blender, and I wanted to stop jumping 
 ## Features
 
 - **Pen**: click for corners, drag for smooth points, Alt to convert or break handles, Ctrl to select points directly. Type lengths and angles while drawing (`3.5`, `<45`, `3.5<45`, `x,y`).
-- **Direct Selection** (the white arrow, A): drag anchors, handles and segments of the curves on the plane without adding points. Click an anchor to select it, Shift+click to add more, Ctrl+drag a box.
+- **Direct Selection** (the white arrow, A): drag anchors, handles and segments of the curves on the plane without adding points. Click an anchor to select it, Shift+click to add more, Ctrl+drag a box. G, R and S move, rotate and scale the selection on the plane; with one point selected they turn and scale both of its handles, and with a handle selected only that handle.
 - **Rectangle, Circle and Polygon** drawn corner to corner, Shift for square, Alt from the centre.
 - **Live Shapes**: rectangles with roundness per corner, ellipses that turn into drops, polygons that turn into stars. Editable until you click Convert to Curves.
 - **Snap**: anchors, midpoints, centres, intersections, perpendicular, on curve and grid, plus smart guides that line the cursor up with points you hovered.
@@ -29,7 +29,7 @@ I draw a lot of flat and stylized work in Blender, and I wanted to stop jumping 
 1. Download the `.zip` from [Releases](../../../../releases) and install it with **Edit > Preferences > Get Extensions > Install from Disk** (or drag it into Blender). If you have Nakan Vector Tools or Nakan Extras for PenForge, disable them first.
 2. Open the **Nakan Vector Draw** tab in the Sidebar (N) and turn on **Vector Mode** at the top.
 3. Click **Pen** (or Ctrl+Shift+P). Click to place corners, drag to make smooth points, click the first point to close the shape. Enter finishes, Esc leaves.
-4. To edit curves without adding points, click **Direct Select** (or press **A** inside the pen). Drag anchors, handles or segments; Alt still converts corners and handles. **P** goes back to the pen.
+4. To edit curves without adding points, click **Direct Select** (or press **A** inside the pen). Drag anchors, handles or segments; Alt still converts corners and handles. Select points (click, Shift+click or Ctrl+drag a box) or click a handle, then press **G**, **R** or **S** to move, rotate or scale. Type a number for an exact angle or factor, hold Shift for steps, click or Enter to confirm, right click or Esc to cancel. **P** goes back to the pen.
 5. While drawing, **D** turns snapping on and off and **S** opens the snap menu (click a name to use it once). The **Snap**, **Grid** and **Guides** buttons in the panel do the same from outside the pen.
 6. Use **Rect**, **Circle** or **Polygon** for shapes. Change their size, roundness or points later in the **Primitive** panel. Click **Convert to Curves** when you want to edit their points with the pen.
 7. To make copies, select a shape and click **Radial**, **Grid** or **Mirror** in the **Repeat** panel. Change the number of copies, the angle, the spacing or the axis there. Edit the original and the copies follow. Click **Expand** when you want them as separate curves.
