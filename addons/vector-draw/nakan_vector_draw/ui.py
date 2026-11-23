@@ -934,15 +934,9 @@ class NKDRAW_PT_curve(_Sub, bpy.types.Panel):
         lay = self.layout
         box = lay
         ob = context.active_object
-        row = box.row(align=True)
-        row.operator("nkdraw.key_points", text="Keyframe points", icon='KEY_HLT').clear = False
-        row.operator("nkdraw.key_points", text="", icon='KEY_DEHLT').clear = True
-        row = box.row(align=True)
-        op = row.operator("object.convert", text="Curve \u2192 Mesh", icon='MESH_DATA')
-        op.target = 'MESH'
-        op = row.operator("object.convert", text="Mesh \u2192 Curve", icon='CURVE_DATA')
-        op.target = 'CURVE'
-        if ob is not None and ob.type == 'CURVE':
+        if ob is None or ob.type != 'CURVE':
+            box.label(text="Select a curve", icon='INFO')
+        else:
             cu = ob.data
             col = box.column(align=True)
             col.label(text="Round bevel")

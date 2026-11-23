@@ -567,11 +567,8 @@ class NKDRAW_PT_shape(bpy.types.Panel):
             return
         if ob is not None and ob.type == 'CURVE':
             lay.operator("nkdraw.make_live", icon='SHADERFX', text="Make Primitive")
-        lay.label(text="Add a primitive on the CPlane:")
-        row = lay.row(align=True)
-        for k, label, _d, icon, _i in KINDS:
-            op = row.operator("nkdraw.add_shape", text=label, icon=icon)
-            op.kind = k
+        else:
+            lay.label(text="Select a shape drawn with Rect, Circle or Polygon", icon='INFO')
 
 
 class NKDRAW_PT_shape_data(bpy.types.Panel):
