@@ -8,7 +8,7 @@ import gpu
 from gpu_extras.batch import batch_for_shader
 from mathutils import Vector
 
-from . import geom, pen
+from . import geom, modegate, pen
 
 ACCENT = (0.1, 0.75, 1.0, 1.0)
 SNAPC = (1.0, 0.8, 0.1, 1.0)
@@ -822,10 +822,18 @@ class NKDRAW_PT_main(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Nakan Vector Draw"
+    bl_order = 0
+
+    def draw_header(self, context):
+        p = modegate.prefs()
+        if p is not None:
+            self.layout.prop(p, "vector_mode", text="")
 
     def draw(self, context):
         st = context.scene.nkdraw
-        lay = self.layout
+        modegate.draw_mode(self.layout, context)    # Vector Mode first: always usable
+        lay = self.layout.column()
+        lay.enabled = modegate.mode_on()            # the tools only work in Vector Mode
         col = lay.column(align=True)
         row = col.row(align=True)
         row.scale_y = 1.6

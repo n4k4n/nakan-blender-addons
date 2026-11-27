@@ -27,7 +27,7 @@ I draw a lot of flat and stylized work in Blender, and I wanted to stop jumping 
 ## How to use
 
 1. Download the `.zip` from [Releases](../../../../releases) and install it with **Edit > Preferences > Get Extensions > Install from Disk** (or drag it into Blender). If you have Nakan Vector Tools or Nakan Extras for PenForge, disable them first.
-2. Open the **Nakan Vector Draw** tab in the Sidebar (N) and turn on **Vector Mode** at the top.
+2. Open the **Nakan Vector Draw** tab in the Sidebar (N) and turn on **Vector Mode** with the checkbox in the panel header.
 3. Click **Pen** (or Ctrl+Shift+P). Click to place corners, drag to make smooth points, click the first point to close the shape. Enter finishes, Esc leaves.
 4. To edit curves without adding points, click **Direct Select** (or press **A** inside the pen). Drag anchors, handles or segments; Alt still converts corners and handles. Select points (click, Shift+click or Ctrl+drag a box) or click a handle, then press **G**, **R** or **S** to move, rotate or scale. Type a number for an exact angle or factor, hold Shift for steps, click or Enter to confirm, right click or Esc to cancel. **P** goes back to the pen.
 5. While drawing, **D** turns snapping on and off and **S** opens the snap menu (click a name to use it once). The **Snap**, **Grid** and **Guides** buttons in the panel do the same from outside the pen.

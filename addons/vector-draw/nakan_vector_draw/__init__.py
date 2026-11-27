@@ -9,7 +9,7 @@ added. Licensed under the GPL-3.0-or-later, like the original."""
 bl_info = {
     "name": "Nakan Vector Draw",
     "author": "Nakan (based on PenForge by Enrico Biancardi)",
-    "version": (1, 4, 0),
+    "version": (1, 4, 1),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > Nakan Vector Draw  |  Ctrl+Shift+P in Object Mode",
     "description": "Vector drawing: an Illustrator-style pen, live shapes, Shape Builder, Repeat, snaps",
@@ -192,9 +192,8 @@ def register():
     shapebuilder.register()
     copytool.register()
     surface.register()
-    modegate.register()                          # the mode panel first: it sits at the top of the tab
-    ui.NKDRAW_PT_main.bl_order = 1
-    for p in _PANELS + (shapes.NKDRAW_PT_shape, shapes.NKDRAW_PT_shape_data, align.NKDRAW_PT_align,
+    modegate.register()
+    for p in _PANELS[1:] + (shapes.NKDRAW_PT_shape, shapes.NKDRAW_PT_shape_data, align.NKDRAW_PT_align,
                         planar.NKDRAW_PT_text, repeat.NKDRAW_PT_repeat):
         modegate.gate(p)
     for c in _OPS + _PANELS:

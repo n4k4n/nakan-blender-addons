@@ -160,44 +160,32 @@ def _coll_changed(self, context):
 
 
 # ------------------------------------------------------------------------------------- panel
-class NKDRAW_PT_mode_top(bpy.types.Panel):
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = "Nakan Vector Draw"
-    bl_label = "Vector Mode"
-    bl_order = 0
-
-    def draw_header(self, context):
-        p = prefs()
-        if p is not None:
-            self.layout.prop(p, "vector_mode", text="")
-
-    def draw(self, context):
-        lay = self.layout
-        p = prefs()
-        sc = context.scene
-        lay.prop(sc, "nkpf_collection", text="Collection", icon='OUTLINER_COLLECTION')
-        if sc.nkpf_collection is None:
-            r = lay.row()
-            r.scale_y = 0.7
-            r.label(text="Empty = \"%s\" (created when needed)" % AUTO_NAME)
-        col = lay.column()
-        col.enabled = mode_on()
-        from . import surface
-        box = col.box()
-        surface.draw_ui(box, context)
-        if p is not None:
-            col.prop(p, "move_on_select")
-        r = col.row()
+def draw_mode(lay, context):
+    """The Vector Mode part, at the top of the Nakan Vector Draw panel (its checkbox is in the header)."""
+    p = prefs()
+    sc = context.scene
+    lay.prop(sc, "nkpf_collection", text="Collection", icon='OUTLINER_COLLECTION')
+    if sc.nkpf_collection is None:
+        r = lay.row()
         r.scale_y = 0.7
-        r.label(text="G / R / S / Shift+D on the CPlane · P = Pen")
+        r.label(text="Empty = \"%s\" (created when needed)" % AUTO_NAME)
+    col = lay.column()
+    col.enabled = mode_on()
+    from . import surface
+    box = col.box()
+    surface.draw_ui(box, context)
+    if p is not None:
+        col.prop(p, "move_on_select")
+    r = col.row()
+    r.scale_y = 0.7
+    r.label(text="G / R / S / Shift+D on the CPlane \u00b7 P = Pen")
+    lay.separator()
 
 
 def register():
     bpy.types.Scene.nkpf_collection = PointerProperty(
         type=bpy.types.Collection, name="Collection", update=_coll_changed,
         description="Where everything made in Vector Mode goes (empty = a \"Nakan Vector Draw\" collection)")
-    bpy.utils.register_class(NKDRAW_PT_mode_top)
     bpy.app.timers.register(snapshot, first_interval=0.1)
     if on_depsgraph not in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.append(on_depsgraph)
@@ -212,5 +200,4 @@ def unregister():
         bpy.app.handlers.load_post.remove(on_load)
     if on_depsgraph in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(on_depsgraph)
-    bpy.utils.unregister_class(NKDRAW_PT_mode_top)
     del bpy.types.Scene.nkpf_collection
