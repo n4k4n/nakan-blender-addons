@@ -1,11 +1,11 @@
 bl_info = {
     "name": "Nakan Text Animator Tools",
     "author": "Nakan Art",
-    "version": (1, 2, 0),
+    "version": (1, 3, 0),
     "blender": (5, 0, 0),
     "location": "Properties > Text (Object Data)",
     "description": "After Effects style text animators (range selector, opacity, position, "
-                   "scale, rotation, tracking, material fill) on regular, editable Text objects",
+                   "scale, rotation, tracking, material fill, floating) on regular, editable Text objects",
     "category": "Animation",
 }
 
@@ -41,6 +41,8 @@ ANIM_KINDS = [
     ('FILL', "Fill (Material)", "Blend selected characters into another material", 'MATERIAL'),
     ('EXTRUDE', "Extrude", "Per-character depth", 'MOD_SOLIDIFY'),
     ('BEVEL', "Bevel", "Per-character bevel depth", 'MOD_BEVEL'),
+    ('FLOATING', "Floating", "Characters drift and wobble on their own (random position and rotation)",
+     'FORCE_TURBULENCE'),
 ]
 KIND_LABEL = {k[0]: k[1] for k in ANIM_KINDS}
 KIND_PROPS = {
@@ -52,7 +54,10 @@ KIND_PROPS = {
     'FILL': ["Material"],
     'EXTRUDE': ["Extrude", "Depth Anchor"],
     'BEVEL': ["Bevel"],
+    'FLOATING': ["Mode", "Position", "Rotation", "Speed", "Correlation", "Seed", "Time Offset",
+                 "Drift Speed", "Spin", "Drift Start", "Anchor", "Anchor Offset"],
 }
+FLOAT_DRIFT_ONLY = {"Drift Speed", "Spin", "Drift Start"}
 FILL_MODES = {'NONE': 0, 'BACK': 1, 'FRONT': 2, 'BOTH': 3, 'HALF': 3, 'FULL': 3}
 FALLOFF_NODE = "AE Falloff"
 
@@ -591,7 +596,7 @@ def _build_selector(ng, b, G):
     v = b.switch('FLOAT', G("Hard"), fc.outputs[0], hard)
     shape = b.switch('FLOAT', G("Invert"), v, b.m('SUBTRACT', 1.0, v))
     sel = b.m('MULTIPLY', shape, b.m('DIVIDE', G("Amount"), 100.0))
-    return geo, sel
+    return geo, sel, u_raw
 
 
 def _anchor_sockets(P):
@@ -600,6 +605,58 @@ def _anchor_sockets(P):
            "Y -100 bottom / 100 top, Z -100 back / 100 front")
     P("Anchor Offset", 'NodeSocketVector', (0.0, 0.0, 0.0), subtype='TRANSLATION',
       desc="Extra pivot offset in scene units")
+
+
+def _build_floating(b, G, geo, sel, unit, center):
+    """Floating: a smooth random wobble per unit (two sines with random rates and phases per
+    axis, so it never visibly repeats and stays inside -1..1), plus, in Drift mode, a steady
+    random travel and spin that keeps going. Everything is scaled by the range selector."""
+    tau = 2.0 * math.pi
+    corr = b.m('DIVIDE', G("Correlation"), 100.0, clamp=True)
+    cv = b.xyz(corr, corr, corr)
+
+    def rv(lo, hi, off):
+        # random vector per unit, blended toward one shared value by Correlation
+        vals = []
+        for ident in (unit, 1000003):
+            n = b.node('FunctionNodeRandomValue', {'data_type': 'FLOAT_VECTOR'})
+            b.set(b.inp(n, 'Min'), (lo, lo, lo))
+            b.set(b.inp(n, 'Max'), (hi, hi, hi))
+            b.set(b.inp(n, 'ID'), ident)
+            b.set(b.inp(n, 'Seed'), b.m('ADD', G("Seed"), float(off)))
+            vals.append(b.out(n, 'Value'))
+        return b.v('MULTIPLY_ADD', b.v('SUBTRACT', vals[1], vals[0]), cv, vals[0])
+
+    st = b.node('GeometryNodeInputSceneTime')
+    fps = b.m('MAXIMUM', G("FPS"), 1.0)
+    t = b.m('ADD', b.m('DIVIDE', b.out(st, 'Frame'), fps), G("Time Offset"))
+    w = b.m('MULTIPLY', b.m('MULTIPLY', G("Speed"), tau), t)
+
+    def wobble(off):
+        a = b.v('SINE', b.v('ADD', b.v('SCALE', rv(0.6, 1.4, off), scale=w), rv(0.0, tau, off + 1)))
+        c = b.v('SINE', b.v('ADD', b.v('SCALE', rv(1.2, 2.2, off + 2), scale=w), rv(0.0, tau, off + 3)))
+        return b.v('ADD', b.v('SCALE', a, scale=0.6), b.v('SCALE', c, scale=0.4))
+
+    drift = b.menu('FLOAT', G("Mode"), [("Orbit", 0.0), ("Drift", 1.0)])
+    dt = b.m('MULTIPLY', b.m('MAXIMUM', b.m('DIVIDE', b.m('SUBTRACT', b.out(st, 'Frame'), G("Drift Start")), fps), 0.0),
+             drift)
+    pos = b.v('ADD', b.v('MULTIPLY', G("Position"), wobble(10)),
+              b.v('SCALE', b.v('MULTIPLY', G("Drift Speed"), rv(-1.0, 1.0, 20)), scale=dt))
+    rot = b.v('ADD', b.v('MULTIPLY', G("Rotation"), wobble(30)),
+              b.v('SCALE', b.v('MULTIPLY', G("Spin"), rv(-1.0, 1.0, 40)), scale=dt))
+
+    e2r = b.node('FunctionNodeEulerToRotation')
+    b.set(b.inp(e2r, 'Euler'), b.v('SCALE', rot, scale=sel))
+    nr = b.node('GeometryNodeRotateInstances')
+    b.set(b.inp(nr, 'Instances'), geo)
+    b.set(b.inp(nr, 'Rotation'), e2r.outputs[0])
+    b.set(b.inp(nr, 'Pivot Point'), center)
+    b.inp(nr, 'Local Space').default_value = True
+    tp = b.node('GeometryNodeTranslateInstances')
+    b.set(b.inp(tp, 'Instances'), nr.outputs[0])
+    b.set(b.inp(tp, 'Translation'), b.v('SCALE', pos, scale=sel))
+    b.inp(tp, 'Local Space').default_value = False
+    return tp.outputs[0]
 
 
 def build_animator_group(kind):
@@ -652,6 +709,26 @@ def build_animator_group(kind):
     elif kind == 'BEVEL':
         P("Bevel", 'NodeSocketFloat', 0.0, subtype='DISTANCE', min_value=0.0,
           desc="Bevel depth of the selected characters (the Text object's own value elsewhere)")
+    elif kind == 'FLOATING':
+        P("Mode", 'NodeSocketMenu',
+          desc="Orbit: each character wobbles around its own place and always comes back. "
+               "Drift: on top of the wobble, each character keeps travelling and spinning away")
+        P("Position", 'NodeSocketVector', (0.05, 0.05, 0.0), subtype='TRANSLATION',
+          desc="Largest distance from the rest position on each axis (the wobble range)")
+        P("Rotation", 'NodeSocketVector', (0.0, 0.0, math.radians(8.0)), subtype='EULER',
+          desc="Largest rotation away from the rest angle on each axis")
+        P("Speed", 'NodeSocketFloat', 0.5, min_value=0.0, desc="Wobbles per second")
+        P("Correlation", 'NodeSocketFloat', 0.0, subtype='PERCENTAGE', min_value=0.0, max_value=100.0,
+          desc="0%: every unit floats on its own. 100%: all of them move together")
+        P("Seed", 'NodeSocketInt', 0, desc="Another random pattern")
+        P("Time Offset", 'NodeSocketFloat', 0.0, desc="Shift the motion in time (seconds); animatable")
+        P("Drift Speed", 'NodeSocketVector', (0.1, 0.1, 0.0), subtype='TRANSLATION',
+          desc="Drift: largest distance travelled per second on each axis, in a random direction")
+        P("Spin", 'NodeSocketVector', (0.0, 0.0, math.radians(20.0)), subtype='EULER',
+          desc="Drift: largest rotation per second on each axis, in a random direction")
+        P("Drift Start", 'NodeSocketFloat', 1.0, desc="Drift: frame where the characters start travelling")
+        P("FPS", 'NodeSocketFloat', 24.0, hidden=True)
+        _anchor_sockets(P)
     elif kind == 'FILL':
         P("Material", 'NodeSocketMaterial', desc="Material the selected characters blend into")
         P("Fill Attribute", 'NodeSocketString', "ae_fill", hidden=True)
@@ -660,7 +737,7 @@ def build_animator_group(kind):
     gi = b.node('NodeGroupInput')
     go = b.node('NodeGroupOutput')
     G = lambda name: b.out(gi, name)
-    geo, sel = _build_selector(ng, b, G)
+    geo, sel, unit = _build_selector(ng, b, G)
 
     if kind == 'OPACITY':
         opf = b.lerp(1.0, b.m('DIVIDE', G("Opacity"), 100.0), sel)
@@ -675,7 +752,7 @@ def build_animator_group(kind):
         b.inp(tp, 'Local Space').default_value = False
         geo = tp.outputs[0]
 
-    elif kind in ('SCALE', 'ROTATION'):
+    if kind in ('SCALE', 'ROTATION', 'FLOATING'):
         # pivot inside each character's box (X/Y) and depth (Z), plus an absolute offset
         asep = b.node('ShaderNodeSeparateXYZ')
         b.set(asep.inputs[0], b.v('SCALE', G("Anchor"), scale=0.01))
@@ -690,7 +767,9 @@ def build_animator_group(kind):
         center = b.v('ADD', b.xyz(b.lerp(bmn.outputs[0], bmx.outputs[0], fx),
                                   b.lerp(bmn.outputs[1], bmx.outputs[1], fy), cz),
                      G("Anchor Offset"))
-        if kind == 'SCALE':
+        if kind == 'FLOATING':
+            geo = _build_floating(b, G, geo, sel, unit, center)
+        elif kind == 'SCALE':
             target = b.v('SCALE', G("Scale"), scale=0.01)
             sc = b.v('MULTIPLY_ADD', b.v('SUBTRACT', target, (1.0, 1.0, 1.0)), sel, (1.0, 1.0, 1.0))
             nd = b.node('GeometryNodeScaleInstances')
@@ -704,8 +783,9 @@ def build_animator_group(kind):
             b.set(b.inp(nd, 'Instances'), geo)
             b.set(b.inp(nd, 'Rotation'), e2r.outputs[0])
             b.set(b.inp(nd, 'Pivot Point'), center)
-        b.inp(nd, 'Local Space').default_value = True
-        geo = nd.outputs[0]
+        if kind != 'FLOATING':
+            b.inp(nd, 'Local Space').default_value = True
+            geo = nd.outputs[0]
 
     elif kind == 'TRACKING':
         tv = b.m('DIVIDE', b.m('MULTIPLY', b.m('MULTIPLY', G("Tracking"), sel), b.attr('ae_size')), 1000.0)
@@ -919,6 +999,7 @@ def upgrade_animator(ob, mod):
             except Exception:
                 pass
     based = get_in(mod, "Based On")
+    mode = get_in(mod, "Mode") if _ident(mod.node_group, "Mode") is not None else None
     anchor = get_in(mod, "Anchor") if _ident(mod.node_group, "Anchor") is not None else None
     old = mod.node_group
     ng = animator_group(kind).copy()
@@ -931,6 +1012,8 @@ def upgrade_animator(ob, mod):
             except Exception:
                 pass
     set_menu(mod, "Based On", [based] if based else ["Characters"])
+    if mode and _ident(ng, "Mode") is not None:
+        set_menu(mod, "Mode", [mode])
     if _ident(ng, "Anchor") is not None:
         set_menu(mod, "Anchor", [anchor] if anchor else ["Text Alignment"])
     if old.users == 0:
@@ -975,6 +1058,12 @@ def sync_object(ob, mod=None):
     set_in(mod, "Offset", (float(cu.offset_x), float(cu.offset_y), 0.0))
     set_in(mod, "Extrude", float(cu.extrude))
     set_in(mod, "Bevel", float(cu.bevel_depth))
+    sc = bpy.context.scene
+    if sc is not None:
+        fps = sc.render.fps / (sc.render.fps_base or 1.0)
+        for a in animators(ob):
+            if anim_kind(a) == 'FLOATING':
+                set_in(a, "FPS", float(fps))
     geo = find_geometry(ob)
     if geo is not None:
         set_in(geo, "Fill Mode", FILL_MODES.get(cu.fill_mode, 3))
@@ -1393,6 +1482,12 @@ class AETEXT_OT_add_animator(bpy.types.Operator):
         set_menu(mod, "Based On", ["Characters"])
         if self.kind == 'POSITION':
             set_in(mod, "Position", (0.0, -0.5 * ob.data.size, 0.0))
+        if self.kind == 'FLOATING':
+            sz = ob.data.size
+            set_menu(mod, "Mode", ["Orbit"])
+            set_in(mod, "Position", (0.05 * sz, 0.05 * sz, 0.0))
+            set_in(mod, "Drift Speed", (0.1 * sz, 0.1 * sz, 0.0))
+            sync_object(ob)
         if self.kind == 'FILL':
             set_in(mod, "Fill Attribute", "ae_fill_" + uuid.uuid4().hex[:8])
             fm = bpy.data.materials.new("Fill Material")
@@ -1553,6 +1648,10 @@ def draw_ui(self, context):
         col.use_property_decorate = True
         col.label(text=KIND_LABEL.get(kind, "Properties"), icon='PROPERTIES')
         for n in KIND_PROPS.get(kind, []):
+            if kind == 'FLOATING' and n in FLOAT_DRIFT_ONLY and get_in(mod, "Mode") != "Drift":
+                continue
+            if kind == 'FLOATING' and n == "Anchor":
+                col.separator()
             draw_in(col, mod, n)
 
     geo = find_geometry(ob)

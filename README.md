@@ -11,7 +11,7 @@ Each add-on lives in its own folder under [`addons/`](addons), with a step-by-st
 | [Vector Texturing](addons/vector-texturing) | Illustrate with vectors directly on the mesh, projected into the texture, with blur and roughen edges on top | 4.2+ |
 | [Curve Sync](addons/curve-sync) | See the final NLA curve in the Graph Editor, and a scene's curves right on its strip in the Video Sequencer, to sync timing | 4.4+ |
 | [Paintover PSD](addons/paintover-psd) | Render straight to a layered PSD with the render, flat colors, shadows and a mask per object and material, ready to paint over | 4.2+ |
-| [Text Animator Tools](addons/text-animator-tools) | After Effects' text animators, plus animated materials, extrude and bevel per character | 5.0+ |
+| [Text Animator Tools](addons/text-animator-tools) | After Effects' text animators, plus animated materials, extrude and bevel per character, and floating letters | 5.0+ |
 | [GP Tools](addons/gp-tools) | Photoshop-like comforts for Grease Pencil: flip canvas, live mirror, select by layer | 4.3+ |
 | [Bone Tools](addons/bone-tools) | More from the Bone Collections panel: copy a collection with its bones, rename in sequence, sides | 4.1+ |
 | [Collect Files](addons/collect-files) | After Effects' Collect Files: gather everything a project uses into the .blend, and unpack it again | 4.2+ |
