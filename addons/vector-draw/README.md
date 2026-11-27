@@ -6,9 +6,9 @@ I draw a lot of flat and stylized work in Blender, and I wanted to stop jumping 
 
 ## Features
 
-- **Pen**: click for corners, drag for smooth points, Alt to convert or break handles, Ctrl to select points directly. Type lengths and angles while drawing (`3.5`, `<45`, `3.5<45`, `x,y`).
+- **Pen**: click for corners, drag for smooth points, Alt to convert or break handles, Ctrl to select points directly. While dragging a new point, G moves it with its handles (G again to go back to the handles). Type lengths and angles while drawing (`3.5`, `<45`, `3.5<45`, `x,y`).
 - **Direct Selection** (the white arrow, A): drag anchors, handles and segments of the curves on the plane without adding points. Click an anchor to select it, Shift+click to add more, Ctrl+drag a box. G, R and S move, rotate and scale the selection on the plane; with one point selected they turn and scale both of its handles, and with a handle selected only that handle.
-- **Rectangle, Circle and Polygon** drawn corner to corner, Shift for square, Alt from the centre.
+- **Rectangle, Circle and Polygon** drawn corner to corner, Shift for square, Alt from the centre. While you're still dragging, G, R and S move, rotate and scale the shape, and pressing the same key again goes back to drawing it.
 - **Live Shapes**: rectangles with roundness per corner, ellipses that turn into drops, polygons that turn into stars. Editable until you click Convert to Curves.
 - **Snap**: anchors, midpoints, centres, intersections, perpendicular, on curve and grid, plus smart guides that line the cursor up with points you hovered.
 - **Repeat** (like Illustrator's Object > Repeat): Radial, Grid and Mirror copies that stay live. Edit the original and every copy follows. Expand turns them into separate curves.
@@ -31,7 +31,7 @@ I draw a lot of flat and stylized work in Blender, and I wanted to stop jumping 
 3. Click **Pen** (or Ctrl+Shift+P). Click to place corners, drag to make smooth points, click the first point to close the shape. Enter finishes, Esc leaves.
 4. To edit curves without adding points, click **Direct Select** (or press **A** inside the pen). Drag anchors, handles or segments; Alt still converts corners and handles. Select points (click, Shift+click or Ctrl+drag a box) or click a handle, then press **G**, **R** or **S** to move, rotate or scale. Type a number for an exact angle or factor, hold Shift for steps, click or Enter to confirm, right click or Esc to cancel. **P** goes back to the pen.
 5. While drawing, **D** turns snapping on and off and **S** opens the snap menu (click a name to use it once). The **Snap**, **Grid** and **Guides** buttons in the panel do the same from outside the pen.
-6. Use **Rect**, **Circle** or **Polygon** for shapes. Change their size, roundness or points later in the **Primitive** panel. Click **Convert to Curves** when you want to edit their points with the pen.
+6. Use **Rect**, **Circle** or **Polygon** for shapes. Change their size, roundness or points later in the **Primitive** panel. Click **Convert to Curves** when you want to edit their points with the pen. While you're dragging a shape and haven't let go of the mouse, press **G** to move it, **R** to rotate it or **S** to scale it from where it is. Press the same key again to keep drawing. X or Y locks the move to an axis, Shift turns in 15° steps, Esc undoes the move, and letting go of the mouse places the shape. In the pen, G while dragging a new point moves the point with its handles.
 7. To make copies, select a shape and click **Radial**, **Grid** or **Mirror** in the **Repeat** panel. Change the number of copies, the angle, the spacing or the axis there. Edit the original and the copies follow. Click **Expand** when you want them as separate curves.
 8. Select overlapping closed shapes and click **Shape Builder**. Drag across regions to merge them, Alt+drag to delete them, Enter to finish.
 9. Select several objects and use **Align & Distribute** to line them up.

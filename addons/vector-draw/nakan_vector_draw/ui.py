@@ -500,6 +500,14 @@ class NKDRAW_OT_pen(bpy.types.Operator):
             traceback.print_exc()
             self.report({'ERROR'}, "Vector Draw: %s" % e)
             r = 'FINISHED'
+        if getattr(S, "warp", None) is not None:
+            # G / R / S on a shape being dragged ended: put the mouse on the corner being drawn
+            x, y = S.warp
+            S.warp = None
+            try:
+                context.window.cursor_warp(self.region.x + x, self.region.y + y)
+            except (AttributeError, RuntimeError, TypeError):
+                pass
         if context.area:
             context.area.tag_redraw()
         if r == 'FINISHED':

@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "nakan_vector_draw"
-version = "1.3.2"
+version = "1.4.0"
 name = "Nakan Vector Draw"
 tagline = "Vector drawing with a pen tool, live shapes, Repeat and snaps"
 maintainer = "Nakan (based on PenForge by Enrico Biancardi)"

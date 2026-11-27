@@ -19,6 +19,11 @@ driven by the modal operator or by simulated events in tests.
          Alt   = convert: drag anchor = new smooth handles, click anchor = corner,
                  drag handle = break it, drag segment = bend it live, click segment = straight <-> curved
          Space = while dragging a new anchor, reposition it
+  While dragging (mouse still down), toggles like Blender (press again to go back to drawing):
+         Rectangle / Circle / Polygon: G = move the shape, R = rotate it, S = scale it
+         (X / Y lock G to a CPlane axis, Shift = 15 degree steps on R, Esc / right click = undo the move,
+         release the mouse = place the shape as it is)
+         Pen: G = move the new anchor with its handles
 """
 
 import copy
@@ -87,6 +92,8 @@ class _OnceSettings:
 SHAPE_HINT = {'RECT': "Opposite corner (Shift square, Alt from centre) or type w,h",
               'CIRCLE': "Opposite corner (Alt from centre) or type the radius",
               'POLY': "Opposite corner (Alt from centre, Shift flat \u00b7 Up/Down sides) or type the radius"}
+SHAPE_DRAG_HINT = " \u00b7 while dragging: G move, R rotate, S scale"
+XF_NAMES = {'G': "Move", 'R': "Rotate", 'S': "Scale"}
 
 
 class _MoveEv:
@@ -174,6 +181,10 @@ class PenSession:
         self.tool = tool                  # PEN / RECT / CIRCLE / POLY
         self.anchor = None                # first point of a shape being defined
         self.shape_drag = False
+        self.shape_ang = 0.0              # turn of the shape being drawn around the CPlane normal (R while dragging)
+        self.shape_xf = None              # G / R / S running on the shape being dragged
+        self.shape_moved = False          # the shape was moved / turned / scaled: the release places it
+        self.warp = None                  # (x, y) region pixels: the operator puts the mouse there
         self.history = []
         self.buffer = ""
         self.len_lock = None
@@ -235,7 +246,7 @@ class PenSession:
             P.attrs = {"material_index": s.material_index, "resolution_u": s.resolution_u, "use_smooth": s.use_smooth}
             self.paths.append(P)
 
-    def _new_object(self, at, name="Vector Curve"):
+    def _new_object(self, at, name="Vector Curve", ang=0.0):
         """A new curve object with its origin at `at` (the first point / the shape centre)."""
         cu = bpy.data.curves.new(name, 'CURVE')
         cu.dimensions = '3D'
@@ -243,22 +254,24 @@ class PenSession:
         ob = bpy.data.objects.new(name, cu)
         # set the whole world matrix, not just .location: Blender recomputes matrix_world only on
         # the next redraw, and the points are written through it right away
-        ob.matrix_world = self._object_frame(at)
+        ob.matrix_world = self._object_frame(at, ang)
         coll = self.ctx.collection or self.ctx.scene.collection
         coll.objects.link(ob)
         self.objects.append(ob)
         self.created.append(ob)
         return ob
 
-    def _object_frame(self, at):
+    def _object_frame(self, at, ang=0.0):
         """Origin at `at`, local axes = CPlane axes (X, Y, normal), so the object's Local
-        orientation (G Z Z, N panel, Extrude) follows the plane it was drawn on."""
+        orientation (G Z Z, N panel, Extrude) follows the plane it was drawn on. `ang` turns the
+        axes around the normal (a shape rotated while it was drawn keeps straight local axes)."""
         m = Matrix.Translation(Vector(at))
-        if self.st.cplane in {'TOP', 'VIEW'} and not any(abs(a) > 1e-9 for a in self.st.cplane_offset):
+        if self.st.cplane in {'TOP', 'VIEW'} and not any(abs(a) > 1e-9 for a in self.st.cplane_offset) \
+                and abs(ang) < 1e-12:
             return m
         try:
             pl = self.cplane()
-            x, y = Vector(pl.x).normalized(), Vector(pl.y).normalized()
+            x, y = self._turned_axes(pl, ang)
             z = x.cross(y).normalized()
             y = z.cross(x).normalized()
         except Exception:      # noqa: BLE001
@@ -984,7 +997,8 @@ class PenSession:
             return 1.0, 1.0
         d = Vector(c) - Vector(base)
         tol = 1e-9
-        du, dv = d.dot(plane.x), d.dot(plane.y)
+        ax, ay = self._turned_axes(plane, self.shape_ang if self.anchor is not None else 0.0)
+        du, dv = d.dot(ax), d.dot(ay)
         return (-1.0 if du < -tol else 1.0), (-1.0 if dv < -tol else 1.0)
 
     def _commit_point(self, p):
@@ -1216,7 +1230,8 @@ class PenSession:
         self.view = view
         mx, my = ev.mouse_region_x, ev.mouse_region_y
         t, v = ev.type, ev.value
-        self.mods = (ev.shift, ev.alt)
+        if self.shape_xf is None:          # G / R / S keep the shape's Shift / Alt (Shift = steps on R)
+            self.mods = (ev.shift, ev.alt)
         shape = self.tool not in PATH_TOOLS
         if self.menu is not None:
             r = self._menu_event(ev, mx, my)
@@ -1227,6 +1242,23 @@ class PenSession:
             return self._face_event(ev, mx, my)
         if self.xform is not None:
             return self._xform_event(ev, mx, my)
+        if self.shape_xf is not None:
+            return self._shape_xf_event(ev, mx, my)
+        if shape and t in {'G', 'R', 'S'} and v == 'PRESS' and not self.buffer and not ev.ctrl \
+                and self.anchor is not None and self.shape_drag is not False and self._shape_xf_start(t, mx, my):
+            return 'RUNNING'
+        if t == 'G' and v == 'PRESS' and not self.buffer and self.drag is not None \
+                and self.drag.get("kind") == "new":
+            # G while dragging a new anchor: move it with its handles (press G again to go on shaping it)
+            dd = self.drag
+            on = not dd.get("g_move", False)
+            dd["g_move"] = dd["space"] = on
+            p0 = self.paths[dd["path"]].pts[dd["i"]].co
+            dd["space_from"] = self._plane_hit(mx, my, p0)[0] if on else None
+            dd["moved"] = True
+            self.message = ("Move the anchor \u00b7 G again = back to its handles" if on else
+                            "Drag the handles \u00b7 G = move the anchor")
+            return 'RUNNING'
         if self.tool == 'EDIT' and t in {'G', 'R', 'S'} and v == 'PRESS' and not self.buffer \
                 and self.drag is None and not ev.ctrl and not ev.alt and self._xform_start(t, mx, my):
             return 'RUNNING'
@@ -1249,7 +1281,7 @@ class PenSession:
             # Illustrator: hold Space while dragging a new anchor to reposition it
             if self.drag.get("kind") == "new":
                 dd = self.drag
-                dd["space"] = (v == 'PRESS')
+                dd["space"] = (v == 'PRESS') or dd.get("g_move", False)
                 p0 = self.paths[dd["path"]].pts[dd["i"]].co
                 dd["space_from"] = self._plane_hit(mx, my, p0)[0] if v == 'PRESS' else None
                 dd["moved"] = True
@@ -1409,21 +1441,24 @@ class PenSession:
             if self.anchor is None:
                 self.anchor = p.copy()
                 self.shape_drag = m
-                self.message = SHAPE_HINT[self.tool]
+                self.shape_ang = 0.0
+                self.shape_moved = False
+                self.message = SHAPE_HINT[self.tool] + SHAPE_DRAG_HINT
             else:
                 self.commit_shape(p, ev.shift, ev.alt)
         elif value == 'RELEASE' and self.anchor is not None and self.shape_drag is not False:
             start = self.shape_drag
             self.shape_drag = False
-            if (m - start).length >= DRAG_PX * 2:
+            if (m - start).length >= DRAG_PX * 2 or self.shape_moved:
                 self.commit_shape(self.compute_cursor(mx, my, ev), ev.shift, ev.alt)
 
     def shape_geometry(self, a, b, shift, alt):
         """(points, centre, info) of the shape from the first point a to the cursor b."""
         plane = self.cplane()
         a, b = plane.project(a), plane.project(b)     # shapes always lie on the CPlane
+        px, py = self._turned_axes(plane, self.shape_ang)
         d = b - a
-        u, v = d.dot(plane.x), d.dot(plane.y)
+        u, v = d.dot(px), d.dot(py)
         us = self.ctx.scene.unit_settings
 
         def fmt(x):
@@ -1441,10 +1476,10 @@ class PenSession:
                 corners = [(-u, -v), (u, -v), (u, v), (-u, v)]
                 w, h = 2 * abs(u), 2 * abs(v)
             else:
-                c = a + plane.x * (u / 2) + plane.y * (v / 2)
+                c = a + px * (u / 2) + py * (v / 2)
                 corners = [(-u / 2, -v / 2), (u / 2, -v / 2), (u / 2, v / 2), (-u / 2, v / 2)]
                 w, h = abs(u), abs(v)
-            pts = [Pt(c + plane.x * x + plane.y * y, CORNER) for x, y in corners]
+            pts = [Pt(c + px * x + py * y, CORNER) for x, y in corners]
             if u * v < 0:
                 pts.reverse()
             return pts, c, "%s \u00d7 %s" % (fmt(w), fmt(h))
@@ -1452,13 +1487,13 @@ class PenSession:
             if alt:                                   # Alt: from the centre, the cursor on the circle
                 c = a
                 r = math.hypot(u, v)
-                e1 = (plane.x * u + plane.y * v)
-                e1 = e1.normalized() if e1.length > 1e-12 else plane.x.copy()
+                e1 = (px * u + py * v)
+                e1 = e1.normalized() if e1.length > 1e-12 else px.copy()
             else:                                     # inscribed in the square from corner a to the cursor
                 sz = max(abs(u), abs(v))
-                c = a + plane.x * math.copysign(sz / 2, u or 1.0) + plane.y * math.copysign(sz / 2, v or 1.0)
+                c = a + px * math.copysign(sz / 2, u or 1.0) + py * math.copysign(sz / 2, v or 1.0)
                 r = sz / 2
-                e1 = plane.x.copy()
+                e1 = px.copy()
             e2 = plane.n.cross(e1)
             k = 0.5522847498 * r
             pts = []
@@ -1479,11 +1514,11 @@ class PenSession:
                 a0 = -math.pi / 2 + math.pi / n       # flat bottom edge, like a drawn polygon
         else:                                         # inscribed in the circle inscribed in the square a-cursor
             sz = max(abs(u), abs(v))
-            c = a + plane.x * math.copysign(sz / 2, u or 1.0) + plane.y * math.copysign(sz / 2, v or 1.0)
+            c = a + px * math.copysign(sz / 2, u or 1.0) + py * math.copysign(sz / 2, v or 1.0)
             r = sz / 2
             a0 = -math.pi / 2 + math.pi / n           # flat bottom edge
-        pts = [Pt(c + plane.x * (r * math.cos(a0 + 2 * math.pi * k / n)) +
-                  plane.y * (r * math.sin(a0 + 2 * math.pi * k / n)), CORNER) for k in range(n)]
+        pts = [Pt(c + px * (r * math.cos(a0 + 2 * math.pi * k / n)) +
+                  py * (r * math.sin(a0 + 2 * math.pi * k / n)), CORNER) for k in range(n)]
         side = 2 * r * math.sin(math.pi / n)
         return pts, c, "%d sides   R %s   side %s" % (n, fmt(r), fmt(side))
 
@@ -1503,13 +1538,15 @@ class PenSession:
             self.message = "Too small"
             return False
         self._push()
-        ob = self._new_object(c, TOOL_NAMES[self.tool])
+        ob = self._new_object(c, TOOL_NAMES[self.tool], self.shape_ang)
         P = Path(pts, True, ob)
         self.paths.append(P)
         self.target = ob
         self.write(ob)
         self.anchor = None
         self.shape_drag = False
+        self.shape_xf = None
+        self.shape_moved = False
         self._refresh_dynamic()
         self.message = "%s %s" % (TOOL_NAMES[self.tool], info)
         return True
@@ -1517,6 +1554,7 @@ class PenSession:
     def apply_shape_buffer(self, txt):
         plane = self.work_plane(self.anchor)
         shift, alt = self.mods
+        ax, ay = self._turned_axes(plane, self.shape_ang)
         if self.tool == 'RECT':
             parts = [self._to_bu(t) for t in txt.replace(";", ",").split(",")]
             if any(x is None for x in parts) or len(parts) not in (1, 2):
@@ -1526,9 +1564,9 @@ class PenSession:
             w = parts[0] * su
             h = (parts[1] if len(parts) == 2 else parts[0]) * sv
             if alt:
-                b = self.anchor + plane.x * (w / 2) + plane.y * (h / 2)
+                b = self.anchor + ax * (w / 2) + ay * (h / 2)
             else:
-                b = self.anchor + plane.x * w + plane.y * h
+                b = self.anchor + ax * w + ay * h
             return self.commit_shape(b, False, alt)
         r = self._to_bu(txt)
         if r is None:
@@ -1537,10 +1575,131 @@ class PenSession:
         if alt:                                       # Alt: the anchor is the centre
             d = (self.cursor - self.anchor) if self.cursor is not None else plane.x
             d = d - plane.n * d.dot(plane.n)
-            d = d.normalized() if d.length > 1e-12 else plane.x.copy()
+            d = d.normalized() if d.length > 1e-12 else ax.copy()
             return self.commit_shape(self.anchor + d * r, shift, True)
         su, sv = self._mouse_signs(self.anchor, plane)  # the anchor is a corner: the square goes towards the mouse
-        return self.commit_shape(self.anchor + plane.x * (2 * r * su) + plane.y * (2 * r * sv), shift, False)
+        return self.commit_shape(self.anchor + ax * (2 * r * su) + ay * (2 * r * sv), shift, False)
+
+    # ------------------------------------------------------------ shapes: G / R / S while dragging
+    @staticmethod
+    def _turned_axes(plane, ang):
+        """The CPlane X / Y axes turned by `ang` around its normal (normal = x cross y kept)."""
+        x, y = Vector(plane.x).normalized(), Vector(plane.y).normalized()
+        if abs(ang) < 1e-12:
+            return x, y
+        c, s_ = math.cos(ang), math.sin(ang)
+        return x * c + y * s_, y * c - x * s_
+
+    def _shape_xf_start(self, key, mx, my):
+        """Blender style G / R / S on the shape being dragged, from where it is now."""
+        if self.anchor is None or self.cursor is None:
+            return False
+        plane = self.cplane()
+        a, b = plane.project(self.anchor), plane.project(self.cursor)
+        shift, alt = self.mods
+        _pts, c, _info = self.shape_geometry(a, b, shift, alt)
+        m0 = self._plane_hit(mx, my, c)[0]
+        if m0 is None:
+            return False
+        self.snap = None
+        self.track_draw = []
+        self.shape_xf = {"mode": key, "a": a.copy(), "b": b.copy(), "c": Vector(c), "ang": self.shape_ang,
+                         "m0": m0, "last": m0 - c, "turn": 0.0, "axis": None,
+                         "orig": (a.copy(), b.copy(), self.shape_ang)
+                         if self.shape_xf is None else self.shape_xf["orig"]}
+        self.shape_moved = True
+        self._shape_xf_message()
+        return True
+
+    def _shape_xf_message(self):
+        X = self.shape_xf
+        extra = {'G': " \u00b7 X / Y lock an axis", 'R': " \u00b7 Shift 15\u00b0", 'S': ""}[X["mode"]]
+        lock = (" (%s)" % X["axis"]) if X["axis"] else ""
+        self.message = "%s shape%s \u00b7 %s again = draw on \u00b7 release = place%s \u00b7 Esc undo" % (
+            XF_NAMES[X["mode"]], lock, X["mode"], extra)
+
+    def _shape_xf_apply(self, mx, my, ev):
+        X = self.shape_xf
+        plane = self.cplane()
+        c, a0, b0 = X["c"], X["a"], X["b"]
+        T = self._plane_hit(mx, my, c)[0]
+        if T is None:
+            return
+        n = Vector(plane.n).normalized()
+        mode = X["mode"]
+        if mode == 'G':
+            d = T - X["m0"]
+            d -= n * d.dot(n)
+            if X["axis"] is not None:
+                ax = Vector(plane.x if X["axis"] == 'X' else plane.y).normalized()
+                d = ax * d.dot(ax)
+            self.anchor, self.cursor = a0 + d, b0 + d
+            self.shape_ang = X["ang"]
+            return
+        v1 = T - c
+        v1 -= n * v1.dot(n)
+        if mode == 'R':
+            v0 = X["last"]
+            if v1.length > 1e-12 and v0.length > 1e-12:
+                X["turn"] += math.atan2(n.dot(v0.cross(v1)), v0.dot(v1))   # summed: turns past 180 degrees
+                X["last"] = v1
+            ang = X["turn"]
+            if ev.shift:
+                step = math.radians(15.0)
+                ang = round(ang / step) * step
+            R = Matrix.Rotation(ang, 3, n)
+            self.anchor, self.cursor = c + R @ (a0 - c), c + R @ (b0 - c)
+            self.shape_ang = X["ang"] + ang
+            return
+        r0 = X["m0"] - c
+        r0 -= n * r0.dot(n)
+        f = v1.length / r0.length if r0.length > 1e-12 else 1.0
+        self.anchor, self.cursor = c + (a0 - c) * f, c + (b0 - c) * f
+        self.shape_ang = X["ang"]
+
+    def _shape_xf_end(self):
+        """Back to drawing: the mouse jumps to the corner being dragged so the shape does not."""
+        self.shape_xf = None
+        if self.cursor is not None and self.view is not None:
+            s_ = self.view.project(self.cursor)
+            if s_ is not None:
+                self.warp = (int(round(s_.x)), int(round(s_.y)))
+        self.message = SHAPE_HINT[self.tool] + SHAPE_DRAG_HINT
+
+    def _shape_xf_event(self, ev, mx, my):
+        X = self.shape_xf
+        t, v = ev.type, ev.value
+        if t in {'MOUSEMOVE', 'INBETWEEN_MOUSEMOVE'} or t in MODKEYS:
+            self._shape_xf_apply(mx, my, ev)
+            return 'RUNNING'
+        if t == 'LEFTMOUSE' and v == 'RELEASE':
+            shift, alt = self.mods
+            self.commit_shape(self.cursor, shift, alt)
+            self.compute_cursor(mx, my, ev)
+            return 'RUNNING'
+        if v != 'PRESS':
+            return 'RUNNING'
+        if t in {'ESC', 'RIGHTMOUSE'}:
+            a, b, ang = X["orig"]
+            self.anchor, self.cursor, self.shape_ang = a, b, ang
+            self._shape_xf_end()
+            self.message = "Move cancelled \u00b7 " + self.message
+            return 'RUNNING'
+        if t in {'G', 'R', 'S'}:
+            if t == X["mode"]:
+                self._shape_xf_end()
+            else:                                     # switch G <-> R <-> S from where the shape is now
+                orig = X["orig"]
+                self.shape_xf = None
+                if self._shape_xf_start(t, mx, my):
+                    self.shape_xf["orig"] = orig
+            return 'RUNNING'
+        if t in {'X', 'Y'} and X["mode"] == 'G':
+            X["axis"] = None if X["axis"] == t else t
+            self._shape_xf_apply(mx, my, ev)
+            self._shape_xf_message()
+            return 'RUNNING'
+        return 'RUNNING'
 
     # ------------------------------------------------------------ Direct Selection: G / R / S
     def _xform_targets(self):
