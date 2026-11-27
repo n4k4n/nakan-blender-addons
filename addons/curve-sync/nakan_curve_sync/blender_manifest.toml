@@ -1,0 +1,12 @@
+schema_version = "1.0.0"
+
+id = "nakan_curve_sync"
+version = "1.0.0"
+name = "Nakan Curve Sync"
+tagline = "See final NLA curves in the Graph Editor and scene curves on VSE strips"
+maintainer = "Nakan"
+type = "add-on"
+website = "https://github.com/n4k4n/nakan-blender-addons"
+tags = ["Animation", "Sequencer"]
+blender_version_min = "4.4.0"
+license = ["SPDX:GPL-3.0-or-later"]

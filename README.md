@@ -9,6 +9,7 @@ Each add-on lives in its own folder under [`addons/`](addons), with a step-by-st
 | [Texturing Tools](addons/texturing-tools) | Painting tools for the artist: editable round brushes, color variation per stroke, seamless blur, normals from your painting | 4.2+ |
 | [Vector Draw](addons/vector-draw) | Illustrator-style vector drawing on curves: pen, live shapes, Shape Builder, Repeat, snapping | 4.2+ |
 | [Vector Texturing](addons/vector-texturing) | Illustrate with vectors directly on the mesh, projected into the texture, with blur and roughen edges on top | 4.2+ |
+| [Curve Sync](addons/curve-sync) | See the final NLA curve in the Graph Editor, and a scene's curves right on its strip in the Video Sequencer, to sync timing | 4.4+ |
 | [Paintover PSD](addons/paintover-psd) | Render straight to a layered PSD with the render, flat colors, shadows and a mask per object and material, ready to paint over | 4.2+ |
 | [Text Animator Tools](addons/text-animator-tools) | After Effects' text animators, plus animated materials, extrude and bevel per character | 5.0+ |
 | [GP Tools](addons/gp-tools) | Photoshop-like comforts for Grease Pencil: flip canvas, live mirror, select by layer | 4.3+ |
@@ -23,7 +24,7 @@ Each add-on lives in its own folder under [`addons/`](addons), with a step-by-st
 Download the add-on's file from [Releases](../../releases) (or from its folder here), then in Blender go to **Edit > Preferences > Add-ons > Install from Disk**, pick the file and enable it.
 
 - Single `.py` add-ons can be installed as they are.
-- Folder add-ons (Texturing Tools, Vector Texturing, Vector Draw, Paintover PSD, Session Recorder) install from the `.zip` in Releases.
+- Folder add-ons (Texturing Tools, Vector Texturing, Vector Draw, Paintover PSD, Curve Sync, Session Recorder) install from the `.zip` in Releases.
 
 ## Feedback
 
