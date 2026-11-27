@@ -19,7 +19,7 @@ I missed After Effects' text animators in Blender. They open up a huge range of 
 2. In the same tab, click **Make Animatable Text**.
 3. Click **Add Animator** and choose the property: Opacity, Position, Scale, Rotation, Tracking, Fill (Material), Extrude or Bevel.
 4. In the animator's properties, set the value the characters should have when they are selected, for example Opacity 0% or Position Y -0.5.
-5. Animate the Range Selector: keyframe Start, End or Offset (for example End from 0% to 100%) and the effect sweeps through the text. Falloff softens the edge, and Based On switches between characters, words and lines.
+5. Animate the Range Selector: keyframe Start, End or Offset (for example End from 0% to 100%) and the effect sweeps through the text. Falloff softens the edge, and Based On switches between characters, words and lines. Ease Low and Ease High smooth each character's own move, so letters settle into place instead of stopping abruptly (Ease Low on the resting side, Ease High on the animator's side).
 6. Stack more animators for combined effects, such as Position and Opacity together for a classic type-on.
 7. To animate into another material, add a Fill (Material) animator and pick the material. For depth, use Extrude or Bevel animators.
 8. Check Opacity and Fill in Material Preview or Rendered view; Solid view doesn't show them.
