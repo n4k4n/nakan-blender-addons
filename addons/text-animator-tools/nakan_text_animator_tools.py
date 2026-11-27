@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Nakan Text Animator Tools",
     "author": "Nakan Art",
-    "version": (1, 1, 0),
+    "version": (1, 2, 0),
     "blender": (5, 0, 0),
     "location": "Properties > Text (Object Data)",
     "description": "After Effects style text animators (range selector, opacity, position, "
@@ -15,7 +15,7 @@ import uuid
 
 import bpy
 
-NG_VERSION = 11
+NG_VERSION = 12
 BASE_NAME = "AE Text Base"
 ANIM_PREFIX = "AE Text Animator"
 GEO_NAME = "AE Text Geometry"
@@ -572,11 +572,21 @@ def _build_selector(ng, b, G):
     up = b.m('DIVIDE', b.m('SUBTRACT', xp, s0), w, clamp=True)
     down = b.m('DIVIDE', b.m('SUBTRACT', e0, xp), w, clamp=True)
     r = b.m('MINIMUM', up, down)
+    # Ease High / Ease Low (like AE's Advanced range selector): a Hermite curve on the
+    # 0-1 transition of each unit. Slope 1 is linear, slope 0 eases fully at that end.
+    t2 = b.m('MULTIPLY', r, r)
+    t3 = b.m('MULTIPLY', t2, r)
+    h10 = b.m('ADD', b.m('MULTIPLY_ADD', t2, -2.0, r), t3)
+    h01 = b.m('MULTIPLY', t2, b.m('MULTIPLY_ADD', r, -2.0, 3.0))
+    h11 = b.m('SUBTRACT', t3, t2)
+    m_low = b.m('SUBTRACT', 1.0, b.m('DIVIDE', G("Ease Low"), 100.0))
+    m_high = b.m('SUBTRACT', 1.0, b.m('DIVIDE', G("Ease High"), 100.0))
+    eased = b.m('MULTIPLY_ADD', m_low, h10, b.m('MULTIPLY_ADD', m_high, h11, h01))
     fc = b.node('ShaderNodeFloatCurve')
     fc.name = FALLOFF_NODE
     fc.label = "Falloff"
     b.set(b.inp(fc, 'Factor'), 1.0)
-    b.set(b.inp(fc, 'Value'), r)
+    b.set(b.inp(fc, 'Value'), eased)
     hard = b.m('GREATER_THAN', r, 0.4999)
     v = b.switch('FLOAT', G("Hard"), fc.outputs[0], hard)
     shape = b.switch('FLOAT', G("Invert"), v, b.m('SUBTRACT', 1.0, v))
@@ -603,6 +613,10 @@ def build_animator_group(kind):
     S("Offset", 'NodeSocketFloat', 0.0, subtype='PERCENTAGE', min_value=-100.0, max_value=100.0)
     S("Falloff", 'NodeSocketFloat', 30.0, subtype='PERCENTAGE', min_value=0.0, max_value=100.0,
       desc="Width of the soft edge of the range (0%: hard edge)")
+    S("Ease High", 'NodeSocketFloat', 0.0, subtype='PERCENTAGE', min_value=0.0, max_value=100.0,
+      desc="Eases each unit's transition where it is fully selected (the animator's values)")
+    S("Ease Low", 'NodeSocketFloat', 0.0, subtype='PERCENTAGE', min_value=0.0, max_value=100.0,
+      desc="Eases each unit's transition where it is unselected (the text's own resting state)")
     S("Hard", 'NodeSocketBool', False, desc="No interpolation: characters snap in or out")
     S("Based On", 'NodeSocketMenu')
     S("Amount", 'NodeSocketFloat', 100.0, subtype='PERCENTAGE', min_value=-100.0, max_value=100.0)
@@ -1515,6 +1529,9 @@ def draw_ui(self, context):
         col.label(text="Selector", icon='SELECT_SET')
         for n in ("Start", "End", "Offset", "Falloff"):
             draw_in(col, mod, n)
+        if not get_in(mod, "Hard"):
+            for n in ("Ease High", "Ease Low"):
+                draw_in(col, mod, n)
         draw_in(col, mod, "Hard", text="Hard (no falloff)")
         fc = mod.node_group.nodes.get(FALLOFF_NODE) if mod.node_group else None
         if fc is not None and not get_in(mod, "Hard"):

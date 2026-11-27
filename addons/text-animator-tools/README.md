@@ -7,7 +7,7 @@ I missed After Effects' text animators in Blender. They open up a huge range of 
 ## Features
 
 - **Animators**: Opacity, Position, Scale, Rotation, Tracking, Fill (Material), Extrude and Bevel. Stack as many as you want, each one keyframable.
-- **Range Selector like AE**: Start, End and Offset, Falloff with an editable falloff curve, Hard mode, Based On characters, words or lines, Amount, Invert, Reverse, and Randomize Order with a seed.
+- **Range Selector like AE**: Start, End and Offset, Falloff with an editable falloff curve, Ease High and Ease Low, Hard mode, Based On characters, words or lines, Amount, Invert, Reverse, and Randomize Order with a seed.
 - **Anchor point** per character for Scale and Rotation, set as a percentage of each glyph's box.
 - **Tracking anchor**: letters can spread from the left, the center or the right of each line (or follow the text's own alignment), and that side stays in place.
 - **Per-character geometry**: fill, extrude and round bevel are built per character, so depth and bevel can be animated too.
